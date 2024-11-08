@@ -1,20 +1,27 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import AppNavigator from './navigation';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function App() {
-  return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
-  );
-}
+  const [isLoggedIn, setIsLoggedIn] = useState(null);
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+  useEffect(() => {
+    const checkUserLoggedIn = async () => {
+      const user = await AsyncStorage.getItem('user');
+      if (user) {
+        setIsLoggedIn(true);
+      } else {
+        setIsLoggedIn(false);
+      }
+    };
+
+    checkUserLoggedIn();
+  }, []);
+
+  // Optionally return a loading screen here
+  if (isLoggedIn === null) {
+    return null; // or a loading indicator
+  }
+
+  return <AppNavigator isLoggedIn={isLoggedIn} />;
+}
