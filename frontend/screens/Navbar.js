@@ -10,7 +10,8 @@ const NavbarFooter = () => {
   const navItems = [
     { icon: 'home-outline', activeIcon: 'home', label: 'Home', screen: 'Home' },
     { icon: 'pie-chart-outline', activeIcon: 'pie-chart', label: 'Chart', screen: 'Statistics' },
-    { icon: 'receipt-outline', activeIcon: 'receipt', label: 'Lock', screen: 'RecipeSwiper' },
+    // { icon: 'receipt-outline', activeIcon: 'receipt', label: 'Lock', screen: 'RecipeSwiper' },
+    { icon: 'receipt-outline', activeIcon: 'receipt', label: 'Lock', screen: 'MealTime' },
     { icon: 'person-outline', activeIcon: 'person', label: 'Profile', screen: 'UserProfile' },
   ];
 

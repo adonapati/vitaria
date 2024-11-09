@@ -7,7 +7,7 @@ import SignupScreen from './screens/SignupScreen';
 import HomeScreen from './screens/HomeScreen';
 import ProfileSetupScreen from './screens/ProfileSetup';
 import RecipeSwiperScreen from './screens/SwiperScreen';
-
+import MealSelectorScreen from './screens/MealTime';
 
 import UserProfile from './screens/UserProfile';
 import StatisticsDash from './screens/StatisticsDash';
@@ -28,6 +28,7 @@ export default function AppNavigator({ isLoggedIn }) {
         <Stack.Screen name="RecipeSwiper" component={RecipeSwiperScreen} />
         <Stack.Screen name="UserProfile" component={UserProfile}/>
         <Stack.Screen name="Statistics" component={StatisticsDash}/>
+        <Stack.Screen name="MealTime" component={MealSelectorScreen}/>
       </Stack.Navigator>
     </NavigationContainer>
   );
