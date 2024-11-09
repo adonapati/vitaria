@@ -403,8 +403,18 @@ function buildCalorieAndWaterPrompt(user) {
             ) {
                 throw new Error('Invalid intake data format');
             }
+            const minWaterLiters = parseFloat(waterIntake.min);
+            const maxWaterLiters = parseFloat(waterIntake.max);
 
-            return { calorieIntake, waterIntake };
+            // Calculate average for calories and water intake
+            const averageCalorieIntake = (calorieIntake.min + calorieIntake.max) / 2;
+            const averageWaterIntake = (minWaterLiters + maxWaterLiters) / 2;
+
+            // Return the averages
+            return {
+                averageCalorieIntake,
+                averageWaterIntake: `${averageWaterIntake.toFixed(2)} liters`
+            };
         }
         console.error(`Error: Unable to fetch data from Gemini (Status Code: ${response.status})`);
         return null;
