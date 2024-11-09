@@ -317,6 +317,119 @@ app.get('/api/recipe/:userId', async (req, res) => {
     }
 });
 
+function buildCalorieAndWaterPrompt(user) {
+    const { age, activityLevel, gender, height, weight, healthConditions } = user;
+    return `
+    You are a nutrition expert. Based on the user's profile below, provide personalized daily recommendations including:
+
+    1. **Calorie Intake**: The recommended minimum and maximum number of calories the user should consume daily in kcal.
+    2. **Water Intake**: The recommended minimum and maximum amount of water the user should drink daily in liters.
+
+    Please return the results in the following JSON format:
+    {
+        "calorieIntake": {
+            "min": number, // e.g., 1800
+            "max": number  // e.g., 2500
+        },
+        "waterIntake": {
+            "min": "X liters", // e.g., "2.5 liters"
+            "max": "Y liters"  // e.g., "3.5 liters"
+        }
+    }
+
+    User's Profile:
+    - Age: ${age} years
+    - Gender: ${gender}
+    - Height: ${height} cm
+    - Weight: ${weight} kg
+    - Activity Level: ${activityLevel || 'Moderate'} // Options: Sedentary, Light, Moderate, Active, Very Active
+    - Health Conditions: ${healthConditions.join(', ') || 'None'}
+
+    Ensure the recommendations are tailored to the user's physical attributes, activity level, and any health conditions. Provide ranges to accommodate variations in individual needs.
+    `;
+}async function getCalorieAndWaterIntake(userId) {
+    const user = await User.findById(userId);
+    if (!user) {
+        console.error('User not found');
+        return null;
+    }
+
+    const prompt = buildCalorieAndWaterPrompt(user);
+    const headers = {
+        'Content-Type': 'application/json',
+    };
+
+    const data = {
+        contents: [
+            {
+                parts: [
+                    {
+                        text: prompt,
+                    },
+                ],
+            },
+        ],
+    };
+
+    try {
+        const response = await axios.post(url, data, { headers });
+        if (response.status === 200) {
+            let intakeData = response.data.candidates[0].content.parts[0].text;
+
+            // Clean up markdown formatting if present
+            intakeData = intakeData
+                .replace(/```json\s*/g, '') // Remove starting ```json
+                .replace(/```\s*/g, '')     // Remove trailing ```
+                .trim();
+
+            // Use regex to extract JSON object if there are any extra characters
+            const jsonMatch = intakeData.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) {
+                throw new Error('No valid JSON object found');
+            }
+
+            // Parse the extracted JSON
+            const parsedData = JSON.parse(jsonMatch[0]);
+
+            // Validate the parsed data
+            const { calorieIntake, waterIntake } = parsedData;
+            if (
+                typeof calorieIntake !== 'object' ||
+                typeof calorieIntake.min !== 'number' ||
+                typeof calorieIntake.max !== 'number' ||
+                typeof waterIntake !== 'object' ||
+                typeof waterIntake.min !== 'string' ||
+                typeof waterIntake.max !== 'string'
+            ) {
+                throw new Error('Invalid intake data format');
+            }
+
+            return { calorieIntake, waterIntake };
+        }
+        console.error(`Error: Unable to fetch data from Gemini (Status Code: ${response.status})`);
+        return null;
+    } catch (error) {
+        console.error('Error fetching intake recommendations:', error.message);
+        console.error('Full Response:', error);
+        return null;
+    }
+}
+
+app.get('/api/intake/:userId', async (req, res) => {
+    const { userId } = req.params;
+    try {
+        const intakeRecommendations = await getCalorieAndWaterIntake(userId);
+        if (!intakeRecommendations) {
+            return res.status(500).json({ message: 'Error generating intake recommendations' });
+        }
+        res.json(intakeRecommendations);
+    } catch (error) {
+        console.error('Error fetching intake details:', error.message);
+        res.status(500).json({ message: 'Error fetching intake details', error: error.message });
+    }
+});
+
+
 // Start the server
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

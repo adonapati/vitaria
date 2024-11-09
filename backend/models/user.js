@@ -6,7 +6,7 @@ const UserSchema = new mongoose.Schema({
     weight: { type: Number },
     height: { type: Number },
     age: { type: Number },
-    gender: { type: String },
+    gender: { type: String }, 
     allergies: [{ type: String }],
     dietPreferences: [{ type: String }],
     prepTime: { type: String },  // Added prepTime
