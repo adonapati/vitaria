@@ -15,6 +15,7 @@ const UserSchema = new mongoose.Schema({
     healthConditions: [{ type: String }], // Added healthConditions
 
     dailyRecords: [{
+        _id: false,
         date: { 
             type: Date, 
             required: true, 
@@ -25,6 +26,9 @@ const UserSchema = new mongoose.Schema({
         recommendedWaterIntake: { type: Number, default: undefined }, // Allow undefined if not updated
         recommendedCalories: { type: Number, default: undefined } // Allow undefined
     }],
+    // Added Streak tracking fields
+    streak: { type: Number, default: 0 }, // Number of consecutive days meeting goals
+    lastStreakResetDate: { type: Date, default: null } // Date when streak was last reset (for missed days)
 });
 
 const User = mongoose.model('User', UserSchema);

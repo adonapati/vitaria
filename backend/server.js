@@ -291,7 +291,7 @@ function buildPrompt(user) {
     6. Has a detailed description
     7. Uses placeholder images (https://via.placeholder.com/400x300)
 
-    Return the recipes as a JSON array.
+    Return the recipes as a JSON array. 
     `;
     }
 
@@ -320,9 +320,9 @@ app.get('/api/recipe/:userId', async (req, res) => {
 function buildCalorieAndWaterPrompt(user) {
     const { age, activityLevel, gender, height, weight, healthConditions } = user;
     return `
-    You are a nutrition expert. Based on the user's profile below, provide personalized daily recommendations including:
+     You are a nutrition expert. Based on the user's profile below, provide personalized recommendations including:
 
-    1. **Calorie Intake**: The recommended minimum and maximum number of calories the user should consume daily in kcal.
+    1. **Calorie Intake**: The recommended minimum and maximum number of calories the user should consume **per one meal** in kcal considering a person eats 3 meals a day. Assume the user eats 3 main meals per day (you can adjust for snacks if needed).
     2. **Water Intake**: The recommended minimum and maximum amount of water the user should drink daily in liters.
 
     Please return the results in the following JSON format:
@@ -347,7 +347,8 @@ function buildCalorieAndWaterPrompt(user) {
 
     Ensure the recommendations are tailored to the user's physical attributes, activity level, and any health conditions. Provide ranges to accommodate variations in individual needs.
     `;
-}async function getCalorieAndWaterIntake(userId) {
+}
+async function getCalorieAndWaterIntake(userId) {
     const user = await User.findById(userId);
     if (!user) {
         console.error('User not found');
@@ -409,7 +410,23 @@ function buildCalorieAndWaterPrompt(user) {
             // Calculate average for calories and water intake
             const averageCalorieIntake = (calorieIntake.min + calorieIntake.max) / 2;
             const averageWaterIntake = (minWaterLiters + maxWaterLiters) / 2;
-
+             // Update the user's daily records
+             const today = new Date().setHours(0, 0, 0, 0); // Set to midnight for today's date
+             const dailyRecordIndex = user.dailyRecords.findIndex(record => record.date.getTime() === today);
+ 
+             // If there's already a record for today, update it, otherwise create a new one
+             if (dailyRecordIndex !== -1) {
+                 user.dailyRecords[dailyRecordIndex].recommendedCalories = averageCalorieIntake;
+                 user.dailyRecords[dailyRecordIndex].recommendedWaterIntake = averageWaterIntake;
+             } else {
+                 user.dailyRecords.push({
+                     date: new Date(today),
+                     recommendedCalories: averageCalorieIntake,
+                     recommendedWaterIntake: averageWaterIntake
+                 });
+             }
+ 
+             await user.save();
             // Return the averages
             return {
                 averageCalorieIntake,
@@ -439,6 +456,85 @@ app.get('/api/intake/:userId', async (req, res) => {
     }
 });
 
+function isNextDay(lastStreakDate, today) {
+    const lastDate = new Date(lastStreakDate);
+    lastDate.setHours(0, 0, 0, 0); // Remove time component for comparison
+    const nextDay = new Date(lastDate);
+    nextDay.setDate(lastDate.getDate() + 1); // Get the next day
+
+    return nextDay.getTime() === today.getTime();
+}
+
+// Function to update user's calorie and water intake for today
+async function updateUserIntake(userId, calories, waterIntake) {
+    const user = await User.findById(userId);
+    if (!user) {
+        throw new Error('User not found');
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Set time to midnight to match existing records
+
+     // Check if streak has already been updated today
+     const lastStreakUpdate = user.streakLastUpdated;
+     const streakUpdatedToday = lastStreakUpdate && lastStreakUpdate.getTime() === today.getTime();
+ 
+     // Check if the previous streak update was the previous day
+     const isConsecutiveDay = lastStreakUpdate && isNextDay(lastStreakUpdate, today);
+ 
+    // Find today's record
+    const dailyRecordIndex = user.dailyRecords.findIndex(record => record.date.getTime() === today.getTime());
+
+    if (dailyRecordIndex !== -1) {
+        // Update the existing record for today
+        user.dailyRecords[dailyRecordIndex].calories = calories;
+        user.dailyRecords[dailyRecordIndex].waterIntake = waterIntake;
+    } else {
+        // Create a new record for today if not found
+        user.dailyRecords.push({
+            date: today,
+            calories,
+            waterIntake
+        });
+    }
+    // If the streak is updated today, do not increment it again
+    if (!streakUpdatedToday) {
+        if (isConsecutiveDay) {
+            // If it's a consecutive day, increment the streak
+            user.streak += 1;
+        } else {
+            // If not a consecutive day, reset the streak to 1
+            user.streak = 1;
+        }
+        user.streakLastUpdated = today; // Set streak update date to today
+    }
+
+
+    // Save the user with updated intake
+    await user.save();
+
+    return {
+        message: 'User intake updated successfully',
+        dailyRecord: user.dailyRecords[dailyRecordIndex] || user.dailyRecords[user.dailyRecords.length - 1]
+    };
+}
+app.post('/api/intake/update/:userId', async (req, res) => {
+    const { userId } = req.params;
+    const { calories, waterIntake } = req.body;
+
+    // Input validation
+    if (typeof calories !== 'number' || typeof waterIntake !== 'number') {
+        return res.status(400).json({ message: 'Invalid input. Calories and waterIntake should be numbers.' });
+    }
+
+    try {
+        const updateResponse = await updateUserIntake(userId, calories, waterIntake);
+        res.status(200).json(updateResponse);
+    } catch (error) {
+        console.error('Error updating user intake:', error.message);
+        res.status(500).json({ message: 'Error updating user intake', error: error.message });
+    }
+});
 
 // Start the server
 app.listen(PORT, () => {
