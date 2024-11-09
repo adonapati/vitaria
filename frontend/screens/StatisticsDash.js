@@ -1,73 +1,37 @@
 import React from 'react';
 import { View, Text, ScrollView, Dimensions, StyleSheet } from 'react-native';
-import {
-  LineChart,
-  BarChart,
-  PieChart,
-} from 'react-native-chart-kit';
+import { LineChart } from 'react-native-chart-kit';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const screenWidth = Dimensions.get('window').width;
 
 function NutritionDashboard() {
-  // Weekly data
-  const weeklyData = {
+  // Combined data for calories with target line
+  const caloriesData = {
     labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
     datasets: [
       {
         data: [2300, 2150, 2400, 2250, 2350, 2100, 2450],
-        color: (opacity = 1) => `rgba(106, 13, 173, ${opacity})`, // Purple color
+        color: (opacity = 1) => `rgba(255, 99, 71, ${opacity})`, // Tomato color for actual calories
+        strokeWidth: 2,
+      },
+      {
+        data: [2300, 2300, 2300, 2300, 2300, 2300, 2300],
+        color: (opacity = 1) => `rgba(128, 128, 128, ${opacity})`, // Gray color for target
+        strokeWidth: 1,
+        withDots: false,
       },
     ],
+    legend: ['Actual', 'Target']
   };
 
-  // Macronutrients data for bar chart
-  const macroData = {
-    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-    datasets: [
-      {
-        data: [150, 140, 155, 145, 152, 138, 158], // Protein
-        color: (opacity = 1) => `rgba(255, 128, 66, ${opacity})`, // Protein color
-      },
-      {
-        data: [280, 260, 290, 270, 285, 255, 295], // Carbs
-        color: (opacity = 1) => `rgba(0, 196, 159, ${opacity})`, // Carbs color
-      },
-      {
-        data: [70, 65, 75, 68, 72, 63, 77], // Fats
-        color: (opacity = 1) => `rgba(255, 187, 40, ${opacity})`, // Fats color
-      },
-    ],
-  };
-
-  // Pie chart data for macronutrient distribution
-  const macroDistribution = [
-    {
-      name: 'Protein',
-      population: 150,
-      color: '#FF8042',
-      legendFontColor: '#7F7F7F',
-    },
-    {
-      name: 'Carbs',
-      population: 280,
-      color: '#00C49F',
-      legendFontColor: '#7F7F7F',
-    },
-    {
-      name: 'Fats',
-      population: 70,
-      color: '#FFBB28',
-      legendFontColor: '#7F7F7F',
-    },
-  ];
-
-  // Water intake data
   const waterData = {
     labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
     datasets: [
       {
         data: [3, 2.8, 3.2, 2.9, 3.1, 2.7, 3.3],
-        color: (opacity = 1) => `rgba(130, 202, 157, ${opacity})`, // Green color
+        color: (opacity = 1) => `rgba(30, 144, 255, ${opacity})`, // DodgerBlue
+        strokeWidth: 2,
       },
     ],
   };
@@ -77,76 +41,116 @@ function NutritionDashboard() {
     backgroundGradientFrom: '#ffffff',
     backgroundGradientTo: '#ffffff',
     decimalPlaces: 0,
-    color: (opacity = 1) => `rgba(106, 13, 173, ${opacity})`,
+    color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
     style: {
       borderRadius: 16,
     },
+    propsForDots: {
+      r: "6",
+      strokeWidth: "2",
+    },
+    propsForLabels: {
+      fontSize: 12,
+      fontWeight: 'bold',
+    }
   };
+
+  const StatCard = ({ title, value, unit, icon, color }) => (
+    <View style={[styles.statCard, { borderLeftColor: color }]}>
+      <MaterialCommunityIcons name={icon} size={24} color={color} />
+      <Text style={styles.statTitle}>{title}</Text>
+      <Text style={[styles.statValue, { color }]}>
+        {value}
+        <Text style={styles.statUnit}> {unit}</Text>
+      </Text>
+    </View>
+  );
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.title}>Nutritional Insights Dashboard</Text>
+      <Text style={styles.title}>Nutritional Insights</Text>
+
+      {/* Quick Stats Row */}
+      <View style={styles.statsContainer}>
+        <StatCard
+          title="Daily Target"
+          value="2300"
+          unit="kcal"
+          icon="target"
+          color="#FF6B6B"
+        />
+        <StatCard
+          title="Water Goal"
+          value="3.0"
+          unit="L"
+          icon="water"
+          color="#4ECDC4"
+        />
+      </View>
 
       {/* Calories Chart */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Weekly Calorie Intake</Text>
+        <View style={styles.cardHeader}>
+          <MaterialCommunityIcons name="fire" size={24} color="#FF6B6B" />
+          <Text style={styles.cardTitle}>Calorie Tracking</Text>
+        </View>
+        <Text style={styles.cardSubtitle}>Daily intake vs Target</Text>
         <LineChart
-          data={weeklyData}
+          data={caloriesData}
           width={screenWidth - 40}
           height={220}
-          chartConfig={chartConfig}
+          chartConfig={{
+            ...chartConfig,
+            color: (opacity = 1) => `rgba(255, 107, 107, ${opacity})`,
+          }}
           bezier
           style={styles.chart}
-        />
-      </View>
-
-      {/* Macronutrients Distribution */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Macronutrients Distribution</Text>
-        <PieChart
-          data={macroDistribution}
-          width={screenWidth - 40}
-          height={220}
-          chartConfig={chartConfig}
-          accessor="population"
-          backgroundColor="transparent"
-          paddingLeft="15"
-          style={styles.chart}
-        />
-      </View>
-
-      {/* Macronutrients Tracking */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Weekly Macronutrients</Text>
-        <BarChart
-          data={{
-            labels: macroData.labels,
-            datasets: macroData.datasets.map((item, index) => ({
-              ...item,
-              color: item.color,
-            })),
-          }}
-          width={screenWidth - 40}
-          height={220}
-          chartConfig={chartConfig}
-          style={styles.chart}
-          showValuesOnTopOfBars
+          renderDotContent={({ x, y, index }) => (
+            <View
+              key={index}
+              style={{
+                position: 'absolute',
+                left: x - 20,
+                top: y - 24,
+              }}>
+              <Text style={styles.dotLabel}>
+                {caloriesData.datasets[0].data[index]}
+              </Text>
+            </View>
+          )}
         />
       </View>
 
       {/* Water Intake */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Water Intake (L)</Text>
+        <View style={styles.cardHeader}>
+          <MaterialCommunityIcons name="water" size={24} color="#4ECDC4" />
+          <Text style={styles.cardTitle}>Hydration</Text>
+        </View>
+        <Text style={styles.cardSubtitle}>Daily water intake (L)</Text>
         <LineChart
           data={waterData}
           width={screenWidth - 40}
           height={220}
           chartConfig={{
             ...chartConfig,
-            color: (opacity = 1) => `rgba(130, 202, 157, ${opacity})`,
+            color: (opacity = 1) => `rgba(78, 205, 196, ${opacity})`,
           }}
           bezier
           style={styles.chart}
+          renderDotContent={({ x, y, index }) => (
+            <View
+              key={index}
+              style={{
+                position: 'absolute',
+                left: x - 16,
+                top: y - 24,
+              }}>
+              <Text style={styles.dotLabel}>
+                {waterData.datasets[0].data[index]}L
+              </Text>
+            </View>
+          )}
         />
       </View>
     </ScrollView>
@@ -156,40 +160,89 @@ function NutritionDashboard() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#6a0dad',
+    backgroundColor: '#FFF9C4', // Light yellow background
     padding: 20,
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#fff',
+    color: '#333',
     textAlign: 'center',
     marginBottom: 20,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  statCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 15,
+    width: '48%',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderLeftWidth: 4,
+  },
+  statTitle: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 5,
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 5,
+  },
+  statUnit: {
+    fontSize: 14,
+    fontWeight: 'normal',
   },
   card: {
     backgroundColor: '#fff',
     borderRadius: 16,
-    padding: 16,
+    padding: 20,
     marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 5,
   },
   cardTitle: {
-    fontSize: 18,
-    color: '#6a0dad',
-    fontWeight: '600',
-    marginBottom: 8,
-    textAlign: 'center',
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginLeft: 10,
+  },
+  cardSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 15,
+    marginLeft: 34,
   },
   chart: {
     marginVertical: 8,
     borderRadius: 16,
+  },
+  dotLabel: {
+    fontSize: 12,
+    color: '#666',
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    padding: 4,
+    borderRadius: 4,
   },
 });
 
