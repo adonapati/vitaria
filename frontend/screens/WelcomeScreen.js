@@ -63,7 +63,7 @@ export default function WelcomeScreen({ navigation }) {
         opacityAnim.setValue(1); // Reset opacity for the next slide
       });
     } else {
-      navigation.navigate('Dashboard');
+      navigation.navigate('Signup');
     }
   };
 
