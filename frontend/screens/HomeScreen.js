@@ -26,6 +26,21 @@ const HomeScreen = () => {
   const [newWaterAmount, setNewWaterAmount] = useState('');
   const [recentMeals, setRecentMeals] = useState([]);
 
+  useEffect(() => {
+    const loadRecentMeals = async () => {
+        try {
+            const mealsString = await AsyncStorage.getItem('recentMeals');
+            if (mealsString) {
+                setRecentMeals(JSON.parse(mealsString));
+            }
+        } catch (error) {
+            console.error('Error loading recent meals:', error);
+        }
+    };
+    loadRecentMeals();
+}, []);
+
+
   const recommendedCalories = gender === 'male' ? 2500 : 2000;
   const totalCaloriesConsumed = recentMeals.reduce((total, meal) => total + meal.calories, 0);
   const caloriesRemaining = recommendedCalories - totalCaloriesConsumed;
@@ -227,19 +242,23 @@ const HomeScreen = () => {
         <View style={[styles.card, styles.mealsCard]}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Recent Meals</Text>
-            <TouchableOpacity style={styles.addButton} onPress={() => setShowAddMealModal(true)}>
-              <Plus size={20} color="#fff" />
+            <TouchableOpacity onPress={() => setShowAddMealModal(true)}>
+              <Plus size={24} color="#4CAF50" />
             </TouchableOpacity>
           </View>
-          {recentMeals.map((meal) => (
-            <View key={meal.id} style={styles.mealItem}>
-              <View>
-                <Text style={styles.mealName}>{meal.name}</Text>
-                <Text style={styles.mealTime}>{meal.time}</Text>
+          {recentMeals.length === 0 ? (
+            <Text style={styles.emptyMessage}>No recent meals</Text>
+          ) : (
+            recentMeals.map((meal, index) => (
+              <View key={index} style={styles.mealItem}>
+                <View>
+                  <Text style={styles.mealName}>{meal.name}</Text>
+                  <Text style={styles.mealTime}>{meal.time}</Text>
+                </View>
+                <Text style={styles.mealCalories}>{meal.calories} kcal</Text>
               </View>
-              <Text style={styles.mealCalories}>{meal.calories} kcal</Text>
-            </View>
-          ))}
+            ))
+          )}
         </View>
 
         {/* Leaderboard */}
@@ -273,11 +292,6 @@ const HomeScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
-
-        {/*
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity> */}
 
         <View style={styles.spacer} />
       </ScrollView>
@@ -506,11 +520,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
   },
-  mealName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-  },
   mealTime: {
     fontSize: 12,
     color: '#666',
@@ -638,6 +647,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     marginBottom: 15,
   },
+title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 16,
+},
+emptyMessage: {
+    fontSize: 16,
+    color: '#666',
+},
+mealImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    marginRight: 12,
+},
+mealInfo: {
+    flex: 1,
+},
+mealName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+},
+mealPrepTime: {
+    fontSize: 14,
+    color: '#888',
+},
+
 
 
 

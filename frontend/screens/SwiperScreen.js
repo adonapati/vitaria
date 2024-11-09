@@ -263,16 +263,26 @@ const RecipeSwiperScreen = () => {
 
     const saveLikedRecipe = async (recipeId) => {
         try {
-            // Find the recipe with the matching ID
             const likedRecipe = recipes.find(recipe => recipe._id === recipeId);
             if (likedRecipe) {
-                console.log(`Liked recipe: ${likedRecipe.name} calories: ${likedRecipe.calories}`);
+                // Retrieve existing recent meals
+                const existingMeals = await AsyncStorage.getItem('recentMeals');
+                const recentMeals = existingMeals ? JSON.parse(existingMeals) : [];
+    
+                // Add the new recipe at the start of the list
+                recentMeals.unshift(likedRecipe);
+    
+                // Limit the list to the last 5 meals
+                if (recentMeals.length > 5) recentMeals.pop();
+    
+                // Save updated list to AsyncStorage
+                await AsyncStorage.setItem('recentMeals', JSON.stringify(recentMeals));
             }
         } catch (error) {
             console.error('Error saving liked recipe:', error);
         }
     };
-    
+
     const resetPosition = () => {
         Animated.spring(position, {
             toValue: { x: 0, y: 0 },
@@ -434,9 +444,9 @@ const RecipeDetail = ({ recipe, visible, onClose }) => {
                                 <MaterialIcons name="schedule" size={24} color="#FFD700" />
                                 <Text style={styles.metricText}>{recipe.prepTime}</Text>
                             </View>
-                            <View style={styles.metricItem}>
-                                <MaterialIcons name="local-fire-department" size={24} color="#FFD700" />
-                                <Text style={styles.metricText}>{recipe.calories} cal</Text>
+                            <View style={styles.infoItem}>
+                                <MaterialIcons name="local-fire-department" size={20} color="#FFD700" />
+                                <Text style={styles.infoText}>{recipe.calories} cal</Text>
                             </View>
                             <View style={styles.metricItem}>
                                 <MaterialIcons name="restaurant" size={24} color="#FFD700" />
