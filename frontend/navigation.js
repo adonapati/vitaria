@@ -17,7 +17,7 @@ export default function AppNavigator({ isLoggedIn }) {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName={isLoggedIn ? "Statistics" : "WelcomeScreen"}
+        initialRouteName={isLoggedIn ? "Home" : "WelcomeScreen"}
         screenOptions={{ headerShown: false }}
       >
         <Stack.Screen name="WelcomeScreen" component={WelcomeScreen} />
