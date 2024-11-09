@@ -179,16 +179,13 @@ function parseRecipeSuggestions(recipeText) {
 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
 
 async function getRecipeFromGemini(userId) {
-    // Fetch user details from MongoDB
     const user = await User.findById(userId);
     if (!user) {
         console.error('User not found');
         return null;
     }
 
-    // Construct the prompt with user-specific details
     const prompt = buildPrompt(user);
-
     const headers = {
         'Content-Type': 'application/json',
     };
@@ -208,14 +205,46 @@ async function getRecipeFromGemini(userId) {
     try {
         const response = await axios.post(url, data, { headers });
         if (response.status === 200) {
-            const recipes = response.data.candidates.map(candidate => ({
-                instructions: candidate.content.parts.map(part => part.text).join('\n').trim(),
-            }));
-            return { instructions: recipes };
-        } else {
-            console.error(`Error: Unable to fetch data from Gemini (Status Code: ${response.status})`);
-            return null;
+            const recipeText = response.data.candidates[0].content.parts[0].text;
+            
+            // Remove all markdown code blocks and clean the text
+            const cleanedText = recipeText
+                .replace(/```json\s*/g, '') // Remove ```json and any following whitespace
+                .replace(/```\s*/g, '')     // Remove ``` and any following whitespace
+                .replace(/^\s*\[/, '[')     // Ensure the JSON starts with [
+                .replace(/\]\s*$/, ']')     // Ensure the JSON ends with ]
+                .trim();
+
+            try {
+                // Parse the cleaned JSON text
+                const recipes = JSON.parse(cleanedText);
+                
+                // Validate that we have an array of recipes
+                if (!Array.isArray(recipes)) {
+                    throw new Error('Response is not an array');
+                }
+
+                // Validate and clean each recipe
+                const validatedRecipes = recipes.map((recipe, index) => ({
+                    _id: recipe._id || String(index + 1),
+                    name: recipe.name || 'Unnamed Recipe',
+                    imageUrl: recipe.imageUrl || 'https://via.placeholder.com/400x300',
+                    prepTime: recipe.prepTime || '30 mins',
+                    calories: Number(recipe.calories) || 0,
+                    servings: Number(recipe.servings) || 2,
+                    description: recipe.description || 'No description available',
+                    ingredients: Array.isArray(recipe.ingredients) ? recipe.ingredients : [],
+                    instructions: Array.isArray(recipe.instructions) ? recipe.instructions : []
+                }));
+
+                return validatedRecipes;
+            } catch (parseError) {
+                console.error('Error parsing recipe JSON:', parseError, '\nReceived text:', cleanedText);
+                return null;
+            }
         }
+        console.error(`Error: Unable to fetch data from Gemini (Status Code: ${response.status})`);
+        return null;
     } catch (error) {
         console.error('Error fetching recipe:', error);
         return null;
@@ -224,52 +253,67 @@ async function getRecipeFromGemini(userId) {
 
 function buildPrompt(user) {
     const { age, allergies, activityLevel, gender, height, prepTime, weight, healthConditions, cuisinePreferences, dietPreferences } = user;
-
     return `
-You are a chef creating recipes. Generate 5 detailed recipes, each with the following structured information:
-1. Recipe Name
-2. Description (A brief overview of the dish)
-3. Prep Time (in minutes)
-4. Category (e.g., Appetizer, Main Course, Dessert)
-5. Ingredients (list each ingredient on a new line with a '-')
-6. Instructions (list each step on a new line with a '-')
+    You are a chef creating recipes. Generate 5 recipes in JSON format. Each recipe should strictly follow this exact structure:
+    {
+        "_id": "1", // increment for each recipe
+        "name": "Recipe Name",
+        "imageUrl": "https://via.placeholder.com/400x300",
+        "prepTime": "X mins",
+        "calories": number,
+        "servings": number,
+        "description": "Detailed description of the dish",
+        "ingredients": [
+            "ingredient 1 with quantity",
+            "ingredient 2 with quantity"
+        ],
+        "instructions": [
+            "Step 1 instruction",
+            "Step 2 instruction"
+        ]
+    }
 
-Consider these user preferences:
-- Diet preferences: ${dietPreferences.join(', ') || 'None'}
-- Cuisine preferences: ${cuisinePreferences.join(', ') || 'Any'}
-- Allergies: ${allergies.join(', ') || 'None'}
-- Health conditions: ${healthConditions.join(', ') || 'None'}
-- Preferred prep time: ${prepTime || 'Any'}
-- Activity level: ${activityLevel || 'Moderate'}
-and also their height being ${height}, weight being ${weight} and them being of age ${age} and gender ${gender}
+    Consider these user preferences:
+    - Diet preferences: ${dietPreferences.join(', ') || 'None'}
+    - Cuisine preferences: ${cuisinePreferences.join(', ') || 'Any'}
+    - Allergies: ${allergies.join(', ') || 'None'}
+    - Health conditions: ${healthConditions.join(', ') || 'None'}
+    - Preferred prep time: ${prepTime || 'Any'}
+    - Activity level: ${activityLevel || 'Moderate'}
+    - Physical attributes: Height: ${height}, Weight: ${weight}, Age: ${age}, Gender: ${gender}
 
-Please follow this format for each recipe:
-Recipe Name: [Name]
-Description: [Brief description]
-Prep Time: [Time]
-Calories:[calories]
-Category: [Category]
-Ingredients:
-- [Ingredient 1]
-- [Ingredient 2]
-Instructions:
-- [Step 1]
-- [Step 2]
-End of Recipe
+    Generate 5 recipes that match these preferences, ensuring each recipe:
+    1. Has a unique _id (1 through 5)
+    2. Includes precise measurements in ingredients
+    3. Has clear, step-by-step instructions
+    4. Specifies exact prepTime and calories
+    5. Includes a servings count
+    6. Has a detailed description
+    7. Uses placeholder images (https://via.placeholder.com/400x300)
 
-Start generating the recipes now.
-`;
-}
+    Return the recipes as a JSON array.
+    `;
+    }
 
 // Route to get detailed recipes for a specific user
 app.get('/api/recipe/:userId', async (req, res) => {
     const { userId } = req.params;
     try {
-        const { instructions } = await getRecipeFromGemini(userId);
-        res.json({ instructions });
+        const recipes = await getRecipeFromGemini(userId);
+        if (!recipes) {
+            return res.status(500).json({ 
+                message: 'Error generating recipes',
+                fallback: MOCK_RECIPES // Send mock recipes as fallback
+            });
+        }
+        res.json(recipes);
     } catch (error) {
         console.error('Error fetching recipe details:', error.message);
-        res.status(500).json({ message: 'Error fetching recipe details', error });
+        res.status(500).json({ 
+            message: 'Error fetching recipe details', 
+            error: error.message,
+            fallback: MOCK_RECIPES // Send mock recipes as fallback
+        });
     }
 });
 
