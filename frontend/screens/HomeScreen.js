@@ -271,49 +271,61 @@ const HomeScreen = () => {
       </ScrollView>
 
       {/* Add Water Modal */}
-      <Modal visible={showWaterModal} animationType="slide" transparent={true}>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
+      <Modal visible={showWaterModal} animationType="fade" transparent={true}>
+        <View style={styles.centeredModalContainer}>
+          <View style={styles.modalBox}>
             <Text style={styles.modalTitle}>Add Water Consumption</Text>
             <TextInput
-              style={styles.input}
+              style={styles.modalInput}
               placeholder="Enter water in ml"
               value={newWaterAmount}
               keyboardType="numeric"
               onChangeText={(text) => setNewWaterAmount(text)}
             />
-            <Button title="Add Water" onPress={handleAddWater} />
-            <Button title="Cancel" onPress={() => setShowWaterModal(false)} color="red" />
+            <View style={styles.modalButtonContainer}>
+              <TouchableOpacity style={[styles.modalButton, styles.modalButtonAdd]} onPress={handleAddWater}>
+                <Text style={styles.modalButtonText}>Add</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalButton, styles.modalButtonCancel]} onPress={() => setShowWaterModal(false)}>
+                <Text style={styles.modalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
 
       {/* Add Meal Modal */}
-      <Modal visible={showAddMealModal} animationType="slide" transparent={true}>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
+      <Modal visible={showAddMealModal} animationType="fade" transparent={true}>
+        <View style={styles.centeredModalContainer}>
+          <View style={styles.modalBox}>
             <Text style={styles.modalTitle}>Add New Meal</Text>
             <TextInput
-              style={styles.input}
+              style={styles.modalInput}
               placeholder="Meal Name"
               value={newMeal.name}
               onChangeText={(text) => setNewMeal({ ...newMeal, name: text })}
             />
             <TextInput
-              style={styles.input}
+              style={styles.modalInput}
               placeholder="Time (e.g., 8:30 AM)"
               value={newMeal.time}
               onChangeText={(text) => setNewMeal({ ...newMeal, time: text })}
             />
             <TextInput
-              style={styles.input}
+              style={styles.modalInput}
               placeholder="Calories"
               value={newMeal.calories}
               keyboardType="numeric"
               onChangeText={(text) => setNewMeal({ ...newMeal, calories: text })}
             />
-            <Button title="Add Meal" onPress={handleAddMeal} />
-            <Button title="Cancel" onPress={() => setShowAddMealModal(false)} color="red" />
+            <View style={styles.modalButtonContainer}>
+              <TouchableOpacity style={[styles.modalButton, styles.modalButtonAdd]} onPress={handleAddMeal}>
+                <Text style={styles.modalButtonText}>Add</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalButton, styles.modalButtonCancel]} onPress={() => setShowAddMealModal(false)}>
+                <Text style={styles.modalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -322,6 +334,7 @@ const HomeScreen = () => {
     </LinearGradient>
   );
 };
+
 // Style modifications go here
 const styles = StyleSheet.create({
   container: {
@@ -412,18 +425,24 @@ const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
     justifyContent: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',  // Darker overlay for emphasis
   },
   modalContent: {
-    backgroundColor: 'white',
+    backgroundColor: '#FFFFFF',
     marginHorizontal: 20,
-    padding: 20,
-    borderRadius: 10,
+    padding: 25,
+    borderRadius: 15,  // Softer rounded corners for modern look
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 10,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 10,
+    marginBottom: 20,
+    textAlign: 'center',
     color: '#333',
   },
   statsContainer: {
@@ -558,21 +577,22 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 8,
-    marginBottom: 10,
-    borderRadius: 5,
+    borderColor: '#E0E0E0',
+    padding: 10,
+    marginBottom: 15,
+    borderRadius: 10,
   },
   modalButtonContainer: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     marginTop: 10,
   },
   modalButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 5,
-    marginLeft: 10,
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginHorizontal: 5,
+    alignItems: 'center',
   },
   modalButtonAdd: {
     backgroundColor: '#4CAF50',
@@ -584,6 +604,31 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
   },
+  centeredModalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalBox: {
+    width: '85%',
+    backgroundColor: 'white',
+    paddingVertical: 20,
+    paddingHorizontal: 25,
+    borderRadius: 15,
+    elevation: 5,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    marginBottom: 15,
+  },
+
+
+
 });
 
 export default HomeScreen;
