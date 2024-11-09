@@ -29,7 +29,7 @@ export default function LoginScreen({ navigation }) {
   
       // Save only the user object in AsyncStorage
       await AsyncStorage.setItem('user', JSON.stringify(data.user));
-      navigation.navigate('RecipeSwiper');
+      navigation.navigate('Home');
     } catch (error) {
       console.error('Error:', error);
       setError(error.message);
