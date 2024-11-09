@@ -89,6 +89,8 @@ const CUISINE_PREFERENCES = [
 
 const HEALTH_CONDITIONS = [
     'None',
+    'Weight Loss',
+    'Weight Gain',
     'Celiac Disease',
     'IBS',
     'Diabetes',

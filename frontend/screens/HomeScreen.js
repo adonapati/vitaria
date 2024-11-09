@@ -262,10 +262,22 @@ const HomeScreen = () => {
           ))}
         </View>
 
-        {/* Logout Button */}
+        {/* Grocery List */}
+        <View style={[styles.card, styles.leaderboardCard]}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.leaderboardTitleContainer}>
+              <Text style={styles.sectionTitle}>Grocery List</Text>
+            </View>
+            <TouchableOpacity>
+              <ArrowRight size={20} color="#666" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/*
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
         <View style={styles.spacer} />
       </ScrollView>
