@@ -152,7 +152,7 @@ const HomeScreen = () => {
 
     const updatedMeals = [...recentMeals, newMealData];
     const totalCalories = updatedMeals.reduce((total, meal) => total + meal.calories, 0);
-
+    
     setRecentMeals(updatedMeals);
     setDailyStats({
       caloriesRemaining: recommendedCalories - totalCalories,

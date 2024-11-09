@@ -17,6 +17,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import API_URL from './config.js';
 import NavbarFooter from './Navbar.js';
 
+
 const { width, height } = Dimensions.get('window');
 const SWIPE_THRESHOLD = width * 0.25;
 const SWIPE_OUT_DURATION = 250;
@@ -118,7 +119,7 @@ const getRandomImage = () => {
     return recipeImages[randomIndex];
 };
 
-const RecipeSwiperScreen = () => {
+const RecipeSwiperScreen = ({addRecipeToRecentMeals }) => {
     const [recipes, setRecipes] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -127,7 +128,7 @@ const RecipeSwiperScreen = () => {
     const [selectedRecipe, setSelectedRecipe] = useState(null);
     const position = useRef(new Animated.ValueXY()).current;
     const [showResetBar, setShowResetBar] = useState(false);
-
+    console.log('addRecipeToRecentMeals in SwiperScreen:', addRecipeToRecentMeals);
     const rotation = position.x.interpolate({
         inputRange: [-500, 0, 500],
         outputRange: ['-30deg', '0deg', '30deg']
@@ -248,23 +249,29 @@ const RecipeSwiperScreen = () => {
 
     const onSwipeComplete = (direction) => {
         if (direction === 'right') {
-            saveLikedRecipe(recipes[currentIndex]._id);
-            setSelectedRecipe(recipes[currentIndex]);
+            const likedRecipe = recipes[currentIndex];
             setShowRecipe(true);
+            saveLikedRecipe(likedRecipe._id, likedRecipe.name, likedRecipe.calories);
         }
         position.setValue({ x: 0, y: 0 });
-        setCurrentIndex(prevIndex => prevIndex + 1);
+        setCurrentIndex((prevIndex) => Math.min(prevIndex + 1, recipes.length - 1));
     };
+    
 
     const handleReset = () => {
         setShowResetBar(false);
         setCurrentIndex(0);
     };
 
-    const saveLikedRecipe = async (recipeId) => {
+    const saveLikedRecipe = async (recipeId, recipeName, recipeCalories) => {
         try {
-            // Example: Save liked recipe (currently mocked)
-            console.log(`Liked recipe ID: ${recipeId}`);
+            // Mocked save action
+            console.log('addRecipeToRecentMeals:', addRecipeToRecentMeals);
+
+            console.log(`Liked recipe ID: ${recipeId}, Name: ${recipeName}, Calories: ${recipeCalories}`);
+            
+            // Call function to add liked recipe to recent meals
+            addRecipeToRecentMeals(recipeName, recipeCalories);
         } catch (error) {
             console.error('Error saving liked recipe:', error);
         }
