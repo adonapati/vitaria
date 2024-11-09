@@ -1,29 +1,120 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions, Modal, TextInput, Button } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Plus, ArrowRight, Trophy } from 'lucide-react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
+import useStreakTracking from './streaktrack';
 
 const { width } = Dimensions.get('window');
 const waterGoal = 2700;  // 2.7 liters in milliliters
 
+const STORAGE_KEYS = {
+  LAST_CHECK_DATE: 'lastCheckDate',
+  CURRENT_STREAK: 'currentStreak',
+  DAILY_PROGRESS: 'dailyProgress',
+  WATER_CONSUMED: 'waterConsumed',
+  RECENT_MEALS: 'recentMeals'
+};
+
 const HomeScreen = () => {
   const navigation = useNavigation();
+  const [gender] = useState('male');
   const [waterConsumed, setWaterConsumed] = useState(0);
   const [showWaterModal, setShowWaterModal] = useState(false);
   const [newWaterAmount, setNewWaterAmount] = useState('');
-  const [dailyStats] = useState({
-    caloriesRemaining: 850,
-    caloriesConsumed: 1150,
-    dailyStreak: 7,
+  const [recentMeals, setRecentMeals] = useState([]);
+
+  const recommendedCalories = gender === 'male' ? 2500 : 2000;
+  const totalCaloriesConsumed = recentMeals.reduce((total, meal) => total + meal.calories, 0);
+  const caloriesRemaining = recommendedCalories - totalCaloriesConsumed;
+
+  const { streak, saveDailyProgress } = useStreakTracking(waterGoal, recommendedCalories);
+  const [dailyStats, setDailyStats] = useState({
+    caloriesRemaining: caloriesRemaining,
+    caloriesConsumed: totalCaloriesConsumed,
+    dailyStreak: streak
   });
-  const [recentMeals, setRecentMeals] = useState([
-    { id: 1, name: 'Breakfast', time: '8:30 AM', calories: 420 },
-    { id: 2, name: 'Lunch', time: '12:45 PM', calories: 630 },
-    { id: 3, name: 'Snack', time: '3:30 PM', calories: 100 },
-  ]);
+
+  const checkAndResetDaily = async () => {
+    try {
+      const lastCheckDate = await AsyncStorage.getItem(STORAGE_KEYS.LAST_CHECK_DATE);
+      const currentDate = new Date().toLocaleDateString();
+
+      if (lastCheckDate !== currentDate) {
+        // Reset water consumed
+        await AsyncStorage.setItem(STORAGE_KEYS.WATER_CONSUMED, '0');
+        setWaterConsumed(0);
+
+        // Reset meals
+        await AsyncStorage.setItem(STORAGE_KEYS.RECENT_MEALS, JSON.stringify([]));
+        setRecentMeals([]);
+
+        // Update last check date
+        await AsyncStorage.setItem(STORAGE_KEYS.LAST_CHECK_DATE, currentDate);
+
+        // Reset daily stats
+        setDailyStats({
+          caloriesRemaining: recommendedCalories,
+          caloriesConsumed: 0,
+          dailyStreak: streak
+        });
+      }
+    } catch (error) {
+      console.error('Error checking/resetting daily values:', error);
+    }
+  };
+
+  useEffect(() => {
+    const initializeData = async () => {
+      await checkAndResetDaily();
+      await loadSavedData();
+    };
+    
+    initializeData();
+
+    // Set up daily check at midnight
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    const timeUntilMidnight = tomorrow - now;
+
+    const midnightTimer = setTimeout(() => {
+      checkAndResetDaily();
+      // Set up recurring daily check
+      const dailyTimer = setInterval(checkAndResetDaily, 24 * 60 * 60 * 1000);
+      return () => clearInterval(dailyTimer);
+    }, timeUntilMidnight);
+
+    return () => clearTimeout(midnightTimer);
+  }, []);
+
+  useEffect(() => {
+    setDailyStats(prev => ({
+      ...prev,
+      dailyStreak: streak
+    }));
+  }, [streak]);
+
+  const loadSavedData = async () => {
+    try {
+      const savedWater = await AsyncStorage.getItem(STORAGE_KEYS.WATER_CONSUMED);
+      const savedMeals = await AsyncStorage.getItem(STORAGE_KEYS.RECENT_MEALS);
+
+      if (savedWater) setWaterConsumed(parseInt(savedWater));
+      if (savedMeals) {
+        const meals = JSON.parse(savedMeals);
+        setRecentMeals(meals || []);
+      }
+    } catch (error) {
+      console.error('Error loading saved data:', error);
+    }
+  };
+
+  const [showAddMealModal, setShowAddMealModal] = useState(false);
+  const [newMeal, setNewMeal] = useState({ name: '', time: '', calories: '' });
 
   const [leaderboard] = useState([
     { rank: 1, name: 'Sarah M.', points: 2800 },
@@ -32,52 +123,59 @@ const HomeScreen = () => {
     { rank: 4, name: 'Emma R.', points: 2200 },
     { rank: 5, name: 'Mike P.', points: 2100 },
   ]);
-  const waterPercentage = Math.min((waterConsumed / waterGoal) * 100, 100).toFixed(1);
-  const waterRemaining = (waterGoal - waterConsumed) / 1000;  // Convert to liters
 
-  const [showAddMealModal, setShowAddMealModal] = useState(false);
-  const [newMeal, setNewMeal] = useState({ name: '', time: '', calories: '' });
+  const waterPercentage = Math.round((waterConsumed / waterGoal) * 100);
+  const waterRemaining = (waterGoal - waterConsumed) / 1000;
 
-   // Handle adding a new meal
-   const handleAddMeal = () => {
+  const handleAddWater = async () => {
+    const amount = parseInt(newWaterAmount, 10);
+    if (!isNaN(amount)) {
+      const newWaterConsumed = Math.min(waterConsumed + amount, waterGoal);
+      setWaterConsumed(newWaterConsumed);
+      setNewWaterAmount('');
+      setShowWaterModal(false);
+
+      // Save water consumption
+      await AsyncStorage.setItem(STORAGE_KEYS.WATER_CONSUMED, newWaterConsumed.toString());
+      
+      // Update daily progress and check streak
+      await saveDailyProgress(newWaterConsumed, totalCaloriesConsumed);
+    }
+  };
+
+  const handleAddMeal = async () => {
     const newMealData = {
       id: recentMeals.length + 1,
       ...newMeal,
       calories: parseInt(newMeal.calories),
     };
-    setRecentMeals((prevMeals) => {
-      const updatedMeals = [...prevMeals, newMealData];
-      const totalCalories = updatedMeals.reduce((total, meal) => total + meal.calories, 0);
-      const remainingCalories = recommendedCalories - totalCalories;
-      
-      setDailyStats({
-        caloriesRemaining: remainingCalories,
-        caloriesConsumed: totalCalories,
-        dailyStreak: 7, // Assuming this stays constant for now
-      });
 
-      return updatedMeals;
+    const updatedMeals = [...recentMeals, newMealData];
+    const totalCalories = updatedMeals.reduce((total, meal) => total + meal.calories, 0);
+
+    setRecentMeals(updatedMeals);
+    setDailyStats({
+      caloriesRemaining: recommendedCalories - totalCalories,
+      caloriesConsumed: totalCalories,
+      dailyStreak: streak,
     });
+
+    // Save meals
+    await AsyncStorage.setItem(STORAGE_KEYS.RECENT_MEALS, JSON.stringify(updatedMeals));
+    
+    // Update daily progress and check streak
+    await saveDailyProgress(waterConsumed, totalCalories);
+
     setNewMeal({ name: '', time: '', calories: '' });
     setShowAddMealModal(false);
   };
-  
- // Handle logout function
- const handleLogout = async () => {
+
+  const handleLogout = async () => {
     try {
       await AsyncStorage.removeItem('user');
       navigation.navigate('WelcomeScreen');
     } catch (error) {
       console.error('Error logging out:', error);
-    }
-  };
-  // Handle adding water consumption
-  const handleAddWater = () => {
-    const amount = parseInt(newWaterAmount, 10);
-    if (!isNaN(amount)) {
-      setWaterConsumed(prev => Math.min(prev + amount, waterGoal));  // Ensure it doesn't exceed the goal
-      setNewWaterAmount('');
-      setShowWaterModal(false);
     }
   };
 
@@ -109,26 +207,10 @@ const HomeScreen = () => {
             <Plus size={24} color="#4FC3F7" />
           </TouchableOpacity>
         </View>
-        {/* Add Water Modal */}
-        <Modal visible={showWaterModal} animationType="slide" transparent={true}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Add Water Consumption</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter water in ml"
-                value={newWaterAmount}
-                keyboardType="numeric"
-                onChangeText={(text) => setNewWaterAmount(text)}
-              />
-              <Button title="Add Water" onPress={handleAddWater} />
-              <Button title="Cancel" onPress={() => setShowWaterModal(false)} color="red" />
-            </View>
-          </View>
-        </Modal>
+
         {/* Daily Stats */}
         <View style={styles.statsContainer}>
-          {[ 
+          {[
             { unit: 'Remaining', value: dailyStats.caloriesRemaining, title: 'kcal' },
             { unit: 'Consumed', value: dailyStats.caloriesConsumed, title: 'kcal' },
             { unit: 'Streak', value: dailyStats.dailyStreak, title: 'days' }
@@ -188,9 +270,9 @@ const HomeScreen = () => {
         <View style={styles.spacer} />
       </ScrollView>
 
-      {/* Footer */}
+      {/* Navigation Bar */}
       <View style={styles.navbar}>
-        {[ 
+        {[
           { icon: 'home-outline', label: 'Home', active: true },
           { icon: 'pie-chart-outline', label: 'Chart', active: false },
           { icon: 'receipt-outline', label: 'Lock', active: false },
@@ -207,8 +289,26 @@ const HomeScreen = () => {
         ))}
       </View>
 
-     {/* Add Meal Modal */}
-     <Modal visible={showAddMealModal} animationType="slide" transparent={true}>
+      {/* Add Water Modal */}
+      <Modal visible={showWaterModal} animationType="slide" transparent={true}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Add Water Consumption</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter water in ml"
+              value={newWaterAmount}
+              keyboardType="numeric"
+              onChangeText={(text) => setNewWaterAmount(text)}
+            />
+            <Button title="Add Water" onPress={handleAddWater} />
+            <Button title="Cancel" onPress={() => setShowWaterModal(false)} color="red" />
+          </View>
+        </View>
+      </Modal>
+
+      {/* Add Meal Modal */}
+      <Modal visible={showAddMealModal} animationType="slide" transparent={true}>
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Add New Meal</Text>
@@ -504,4 +604,3 @@ const styles = StyleSheet.create({
 });
 
 export default HomeScreen;
-
