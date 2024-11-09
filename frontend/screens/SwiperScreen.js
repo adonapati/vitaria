@@ -268,6 +268,7 @@ const RecipeSwiperScreen = () => {
                 // Retrieve existing recent meals
                 const existingMeals = await AsyncStorage.getItem('recentMeals');
                 const recentMeals = existingMeals ? JSON.parse(existingMeals) : [];
+                console.log("saved")
     
                 // Add the new recipe at the start of the list
                 recentMeals.unshift(likedRecipe);
