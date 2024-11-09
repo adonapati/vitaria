@@ -456,14 +456,7 @@ app.get('/api/intake/:userId', async (req, res) => {
     }
 });
 
-function isNextDay(lastStreakDate, today) {
-    const lastDate = new Date(lastStreakDate);
-    lastDate.setHours(0, 0, 0, 0); // Remove time component for comparison
-    const nextDay = new Date(lastDate);
-    nextDay.setDate(lastDate.getDate() + 1); // Get the next day
 
-    return nextDay.getTime() === today.getTime();
-}
 
 // Function to update user's calorie and water intake for today
 async function updateUserIntake(userId, calories, waterIntake) {
@@ -475,13 +468,7 @@ async function updateUserIntake(userId, calories, waterIntake) {
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Set time to midnight to match existing records
 
-     // Check if streak has already been updated today
-     const lastStreakUpdate = user.streakLastUpdated;
-     const streakUpdatedToday = lastStreakUpdate && lastStreakUpdate.getTime() === today.getTime();
- 
-     // Check if the previous streak update was the previous day
-     const isConsecutiveDay = lastStreakUpdate && isNextDay(lastStreakUpdate, today);
- 
+    
     // Find today's record
     const dailyRecordIndex = user.dailyRecords.findIndex(record => record.date.getTime() === today.getTime());
 
@@ -497,17 +484,7 @@ async function updateUserIntake(userId, calories, waterIntake) {
             waterIntake
         });
     }
-    // If the streak is updated today, do not increment it again
-    if (!streakUpdatedToday) {
-        if (isConsecutiveDay) {
-            // If it's a consecutive day, increment the streak
-            user.streak += 1;
-        } else {
-            // If not a consecutive day, reset the streak to 1
-            user.streak = 1;
-        }
-        user.streakLastUpdated = today; // Set streak update date to today
-    }
+   
 
 
     // Save the user with updated intake
