@@ -19,6 +19,7 @@ const { width } = Dimensions.get('window');
 
 // Predefined options
 const DIET_PREFERENCES = [
+    'Any',
     'Vegetarian',
     'Vegan',
     'Pescatarian',
@@ -27,12 +28,12 @@ const DIET_PREFERENCES = [
     'Keto',
     'Paleo',
     'Low-Carb',
-    'Mediterranean',
     'Halal',
     'Kosher'
 ];
 
 const COMMON_ALLERGIES = [
+    'None',
     'Peanuts',
     'Tree Nuts',
     'Milk',
@@ -71,6 +72,7 @@ const ACTIVITY_LEVELS = [
 ];
 
 const CUISINE_PREFERENCES = [
+    'All',
     'Italian',
     'Indian',
     'Chinese',
@@ -94,7 +96,10 @@ const HEALTH_CONDITIONS = [
     'High Cholesterol',
     'GERD',
     'Lactose Intolerance',
-    'Food Sensitivities'
+    'Food Sensitivities', 
+    'ARFID',
+    'Anorexia',
+    'Bulimia'
 ];
 
 // MultiSelect Modal Component
