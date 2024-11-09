@@ -10,13 +10,14 @@ import RecipeSwiperScreen from './screens/SwiperScreen';
 
 
 import UserProfile from './screens/UserProfile';
+import StatisticsDash from './screens/StatisticsDash';
 const Stack = createStackNavigator();
 
 export default function AppNavigator({ isLoggedIn }) {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName={isLoggedIn ? "Home" : "WelcomeScreen"}
+        initialRouteName={isLoggedIn ? "Statistics" : "WelcomeScreen"}
         screenOptions={{ headerShown: false }}
       >
         <Stack.Screen name="WelcomeScreen" component={WelcomeScreen} />
@@ -26,6 +27,7 @@ export default function AppNavigator({ isLoggedIn }) {
         <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} />
         <Stack.Screen name="RecipeSwiper" component={RecipeSwiperScreen} />
         <Stack.Screen name="UserProfile" component={UserProfile}/>
+        <Stack.Screen name="Statistics" component={StatisticsDash}/>
       </Stack.Navigator>
     </NavigationContainer>
   );

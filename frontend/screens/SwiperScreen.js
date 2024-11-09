@@ -9,7 +9,8 @@ import {
     Image,
     TouchableOpacity,
     ScrollView,
-    Modal
+    Modal,
+    ActivityIndicator
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -97,11 +98,13 @@ const MOCK_RECIPES = [
             'Serve over rice and garnish with sesame seeds.'
         ]
     },
-];
+]
+
 const RecipeSwiperScreen = () => {
     const [recipes, setRecipes] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [showRecipe, setShowRecipe] = useState(false);
     const position = useRef(new Animated.ValueXY()).current;
 
@@ -117,27 +120,62 @@ const RecipeSwiperScreen = () => {
     const fetchRecipes = async () => {
         try {
             setLoading(true);
+            setError(null);
+            
             const userString = await AsyncStorage.getItem('user');
+            if (!userString) {
+                throw new Error('No user data found');
+            }
+    
             const user = JSON.parse(userString);
             const userId = user._id;
-
+    
             const response = await fetch(`${API_URL}/api/recipe/${userId}`);
-            const responseText = await response.text();
-            console.log('Response:', responseText); // Log full response for debugging
-            const data = JSON.parse(responseText);
-            
-            if (Array.isArray(data)) {
-                setRecipes(data);
-            } else {
-                console.error('Data format error: Expected an array');
-                setRecipes([]);
+            const responseData = await response.json();
+    
+            // Check if we received an error response with fallback data
+            if (!response.ok) {
+                if (responseData.fallback) {
+                    console.log('Using fallback recipes due to API error');
+                    setRecipes(responseData.fallback);
+                } else {
+                    throw new Error(responseData.message || 'Failed to fetch recipes');
+                }
+                setLoading(false);
+                return;
             }
+    
+            // Validate the response data
+            const recipes = Array.isArray(responseData) ? responseData : responseData.fallback;
+            
+            if (!recipes || !Array.isArray(recipes)) {
+                throw new Error('Invalid recipe data format');
+            }
+    
+            // Validate each recipe object
+            const validatedRecipes = recipes.map((recipe, index) => ({
+                _id: recipe._id || String(index + 1),
+                name: recipe.name || 'Unnamed Recipe',
+                imageUrl: recipe.imageUrl || 'https://via.placeholder.com/400x300',
+                prepTime: recipe.prepTime || '30 mins',
+                calories: Number(recipe.calories) || 0,
+                servings: Number(recipe.servings) || 2,
+                description: recipe.description || 'No description available',
+                ingredients: Array.isArray(recipe.ingredients) ? recipe.ingredients : [],
+                instructions: Array.isArray(recipe.instructions) ? recipe.instructions : []
+            }));
+    
+            setRecipes(validatedRecipes);
         } catch (error) {
             console.error('Error fetching recipes:', error);
-            setRecipes([]);
+            setError(error.message);
+            // Fallback to mock data
+            setRecipes(MOCK_RECIPES);
+        } finally {
+            setLoading(false);
         }
-    };        
-
+    };
+    
     const panResponder = PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: () => true,
@@ -196,6 +234,29 @@ const RecipeSwiperScreen = () => {
             { rotate: rotation }
         ]
     });
+
+    if (loading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#FFD700" />
+                <Text style={styles.loadingText}>Loading recipes...</Text>
+            </View>
+        );
+    }
+
+    if (error) {
+        return (
+            <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>Error: {error}</Text>
+                <TouchableOpacity 
+                    style={styles.retryButton}
+                    onPress={fetchRecipes}
+                >
+                    <Text style={styles.retryButtonText}>Retry</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
 
     const renderCards = () => {
         if (currentIndex >= recipes.length) {
@@ -551,7 +612,42 @@ const styles = StyleSheet.create({
         width: width - 40,
         height: height * 0.6,
         left: 20,
-    }
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#F5F5F5',
+    },
+    loadingText: {
+        marginTop: 10,
+        fontSize: 16,
+        color: '#666',
+    },
+    errorContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#F5F5F5',
+        padding: 20,
+    },
+    errorText: {
+        fontSize: 16,
+        color: '#FF6B6B',
+        textAlign: 'center',
+        marginBottom: 20,
+    },
+    retryButton: {
+        backgroundColor: '#FFD700',
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 20,
+    },
+    retryButtonText: {
+        fontSize: 16,
+        fontWeight: '500',
+        color: '#333',
+    },
 });
 
 export default RecipeSwiperScreen;
