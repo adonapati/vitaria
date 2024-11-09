@@ -8,6 +8,7 @@ import HomeScreen from './screens/HomeScreen';
 import ProfileSetupScreen from './screens/ProfileSetup';
 import RecipeSwiperScreen from './screens/SwiperScreen';
 
+
 import UserProfile from './screens/UserProfile';
 import StatisticsDash from './screens/StatisticsDash';
 const Stack = createStackNavigator();

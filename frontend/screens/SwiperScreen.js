@@ -100,13 +100,32 @@ const MOCK_RECIPES = [
     },
 ]
 
+const recipeImages = [
+    "https://plus.unsplash.com/premium_vector-1707895669854-949996f03512?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NXx8Zm9vZHxlbnwwfHwwfHx8MA%3D%3D",
+    "https://plus.unsplash.com/premium_vector-1711839884124-9ba4289d1bd8?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8Zm9vZHxlbnwwfHwwfHx8MA%3D%3D",
+    "https://plus.unsplash.com/premium_vector-1707895669941-00eccc17e615?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MjB8fGZvb2R8ZW58MHx8MHx8fDA%3D",
+    "https://plus.unsplash.com/premium_vector-1713201017274-e9e97d783e75?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8Zm9vZHxlbnwwfHwwfHx8MA%3D%3D",
+    "https://plus.unsplash.com/premium_vector-1708810688586-fdd917f9814b?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8a2l0Y2hlbnxlbnwwfHwwfHx8MA%3D%3D",
+    "https://plus.unsplash.com/premium_vector-1707895669908-b188a3a755a9?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8Zm9vZHxlbnwwfHwwfHx8MA%3D%3D",
+    "https://plus.unsplash.com/premium_vector-1711839884126-3f7699c89266?q=80&w=2728&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    "https://plus.unsplash.com/premium_vector-1711839884129-0e98588a3ebf?q=80&w=2654&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    "https://plus.unsplash.com/premium_vector-1713796100360-4be6d2c22904?q=80&w=2954&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+];
+
+const getRandomImage = () => {
+    const randomIndex = Math.floor(Math.random() * recipeImages.length);
+    return recipeImages[randomIndex];
+};
+
 const RecipeSwiperScreen = () => {
     const [recipes, setRecipes] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [showRecipe, setShowRecipe] = useState(false);
+    const [selectedRecipe, setSelectedRecipe] = useState(null);
     const position = useRef(new Animated.ValueXY()).current;
+    const [showResetBar, setShowResetBar] = useState(false);
 
     const rotation = position.x.interpolate({
         inputRange: [-500, 0, 500],
@@ -133,11 +152,15 @@ const RecipeSwiperScreen = () => {
             const response = await fetch(`${API_URL}/api/recipe/${userId}`);
             const responseData = await response.json();
     
-            // Check if we received an error response with fallback data
             if (!response.ok) {
                 if (responseData.fallback) {
                     console.log('Using fallback recipes due to API error');
-                    setRecipes(responseData.fallback);
+                    // Update fallback data with random images
+                    const fallbackWithImages = responseData.fallback.map(recipe => ({
+                        ...recipe,
+                        imageUrl: getRandomImage()
+                    }));
+                    setRecipes(fallbackWithImages);
                 } else {
                     throw new Error(responseData.message || 'Failed to fetch recipes');
                 }
@@ -145,18 +168,17 @@ const RecipeSwiperScreen = () => {
                 return;
             }
     
-            // Validate the response data
             const recipes = Array.isArray(responseData) ? responseData : responseData.fallback;
             
             if (!recipes || !Array.isArray(recipes)) {
                 throw new Error('Invalid recipe data format');
             }
     
-            // Validate each recipe object
+            // Update validation to use random images
             const validatedRecipes = recipes.map((recipe, index) => ({
                 _id: recipe._id || String(index + 1),
                 name: recipe.name || 'Unnamed Recipe',
-                imageUrl: recipe.imageUrl || 'https://via.placeholder.com/400x300',
+                imageUrl: getRandomImage(), // Use random image if no image provided
                 prepTime: recipe.prepTime || '30 mins',
                 calories: Number(recipe.calories) || 0,
                 servings: Number(recipe.servings) || 2,
@@ -169,8 +191,12 @@ const RecipeSwiperScreen = () => {
         } catch (error) {
             console.error('Error fetching recipes:', error);
             setError(error.message);
-            // Fallback to mock data
-            setRecipes(MOCK_RECIPES);
+            // Update mock recipes with random images
+            const mockRecipesWithImages = MOCK_RECIPES.map(recipe => ({
+                ...recipe,
+                imageUrl: getRandomImage()
+            }));
+            setRecipes(mockRecipesWithImages);
         } finally {
             setLoading(false);
         }
@@ -183,10 +209,16 @@ const RecipeSwiperScreen = () => {
             position.setValue({ x: gesture.dx, y: gesture.dy });
         },
         onPanResponderRelease: (event, gesture) => {
+            const isLastCard = currentIndex === recipes.length - 1;
+
             if (gesture.dx > SWIPE_THRESHOLD) {
                 forceSwipe('right');
             } else if (gesture.dx < -SWIPE_THRESHOLD) {
-                forceSwipe('left');
+                if (isLastCard) {
+                    forceSwipeLastCard('left');
+                } else {
+                    forceSwipe('left');
+                }
             } else {
                 resetPosition();
             }
@@ -202,13 +234,30 @@ const RecipeSwiperScreen = () => {
         }).start(() => onSwipeComplete(direction));
     };
 
+    const forceSwipeLastCard = (direction) => {
+        Animated.timing(position, {
+            toValue: { x: -500, y: 0 },
+            duration: SWIPE_OUT_DURATION,
+            useNativeDriver: true
+        }).start(() => {
+            setShowResetBar(true);
+            position.setValue({ x: 150, y: 0 });
+        });
+    };
+
     const onSwipeComplete = (direction) => {
         if (direction === 'right') {
-            setShowRecipe(true);
             saveLikedRecipe(recipes[currentIndex]._id);
+            setSelectedRecipe(recipes[currentIndex]);
+            setShowRecipe(true);
         }
         position.setValue({ x: 0, y: 0 });
-        setCurrentIndex((prevIndex) => Math.min(prevIndex + 1, recipes.length - 1));
+        setCurrentIndex(prevIndex => prevIndex + 1);
+    };
+
+    const handleReset = () => {
+        setShowResetBar(false);
+        setCurrentIndex(0);
     };
 
     const saveLikedRecipe = async (recipeId) => {
@@ -259,15 +308,15 @@ const RecipeSwiperScreen = () => {
     }
 
     const renderCards = () => {
-        if (currentIndex >= recipes.length) {
+        if (showResetBar) {
             return (
                 <View style={styles.noMoreCards}>
-                    <Text style={styles.noMoreCardsText}>No more recipes!</Text>
                     <TouchableOpacity 
-                        style={styles.resetButton}
-                        onPress={() => setCurrentIndex(0)}
+                        style={styles.resetBar}
+                        onPress={handleReset}
                     >
-                        <Text style={styles.resetButtonText}>Start Over</Text>
+                        <View style={styles.resetBarInner}>
+                        </View>
                     </TouchableOpacity>
                 </View>
             );
@@ -302,7 +351,7 @@ const RecipeSwiperScreen = () => {
             </View>
 
             <RecipeDetail
-                recipe={recipes[currentIndex]}
+                recipe={selectedRecipe}
                 visible={showRecipe}
                 onClose={() => setShowRecipe(false)}
             />
@@ -440,13 +489,16 @@ const styles = StyleSheet.create({
     },
     cardContainer: {
         flex: 1,
-        marginTop: 20,
         padding: 20,
+        position: 'absolute',
+        width: width - 40,
+        height: height * 0.2,
+        left: 20,
     },
     card: {
         position: 'absolute',
         width: width - 40,
-        height: height * 0.6,
+        height: height * 0.7,
         backgroundColor: '#FFFFFF',
         borderRadius: 20,
         shadowColor: "#000",
@@ -588,24 +640,40 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        paddingHorizontal: 20,
     },
     noMoreCardsText: {
-        fontSize: 18,
+        fontSize: 20,
         color: '#666',
         fontWeight: '500',
-        marginBottom: 20,
+        marginBottom: 30,
     },
-    resetButton: {
+    resetBar: {
+        width: '60%',
         backgroundColor: '#FFD700',
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        borderRadius: 20,
-        marginTop: 10,
+        height: 20,
+        borderRadius: 30,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
     },
-    resetButtonText: {
+    resetBarInner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    resetBarText: {
         fontSize: 16,
-        fontWeight: '500',
+        fontWeight: '600',
         color: '#333',
+        marginLeft: 10,
     },
     cardContainer: {
         position: 'absolute',
@@ -648,6 +716,11 @@ const styles = StyleSheet.create({
         fontWeight: '500',
         color: '#333',
     },
+    cardsArea: {
+        flex: 1,
+        marginTop: 20, // Added margin at the top of cards area
+    },
+    
 });
 
 export default RecipeSwiperScreen;
