@@ -13,7 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { MaterialIcons } from '@expo/vector-icons';
 import API_URL from './config';
-
+import NavbarFooter from './Navbar';
 const { width } = Dimensions.get('window');
 
 const UserProfile = ({ navigation }) => {
@@ -260,7 +260,10 @@ const UserProfile = ({ navigation }) => {
                 ) : (
                     <Text style={styles.errorText}>User data could not be loaded.</Text>
                 )}
+                <View style={styles.spacer} />
             </ScrollView>
+            
+            <NavbarFooter />
         </View>
     );
 };
@@ -329,6 +332,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 20,
     },
+    spacer: {
+        height: 100, // Additional space to push content above the footer
+      },
     cardTitle: {
         fontSize: 20,
         fontWeight: 'bold',

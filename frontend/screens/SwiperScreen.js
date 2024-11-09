@@ -15,6 +15,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialIcons } from '@expo/vector-icons';
 import API_URL from './config.js';
+import NavbarFooter from './Navbar.js';
 
 const { width, height } = Dimensions.get('window');
 const SWIPE_THRESHOLD = width * 0.25;
@@ -289,6 +290,8 @@ const RecipeSwiperScreen = () => {
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#FFD700" />
                 <Text style={styles.loadingText}>Loading recipes...</Text>
+                <NavbarFooter />
+
             </View>
         );
     }
@@ -318,6 +321,7 @@ const RecipeSwiperScreen = () => {
                         <View style={styles.resetBarInner}>
                         </View>
                     </TouchableOpacity>
+
                 </View>
             );
         }
@@ -355,6 +359,8 @@ const RecipeSwiperScreen = () => {
                 visible={showRecipe}
                 onClose={() => setShowRecipe(false)}
             />
+                        <NavbarFooter />
+
         </View>
     );
 };
@@ -385,7 +391,9 @@ const RecipeCard = ({ recipe, isFirst }) => {
                     {recipe.description}
                 </Text>
             </View>
+
         </Animated.View>
+        
     );
 };
 
@@ -400,6 +408,8 @@ const RecipeDetail = ({ recipe, visible, onClose }) => {
             transparent={false}
         >
             <View style={styles.modalContainer}>
+
+
                 <ScrollView>
                     <Image
                         source={{ uri: recipe.imageUrl }}
@@ -456,8 +466,12 @@ const RecipeDetail = ({ recipe, visible, onClose }) => {
                             ))}
                         </View>
                     </View>
+                    <View style={styles.spacer} />
                 </ScrollView>
+                
             </View>
+            
+
         </Modal>
     );
 };
@@ -616,6 +630,9 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#666',
     },
+    spacer: {
+        height: 10, // Additional space to push content above the footer
+      },
     instructionItem: {
         flexDirection: 'row',
         marginBottom: 15,

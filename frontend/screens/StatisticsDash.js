@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { LineChart } from 'react-native-chart-kit';
-
+import NavbarFooter from './Navbar';
 const { width } = Dimensions.get('window');
 
 const NutritionDashboard = () => {
@@ -64,7 +64,10 @@ const NutritionDashboard = () => {
                 </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.content}>
+            <ScrollView 
+                contentContainerStyle={styles.scrollContent}
+                scrollIndicatorInsets={{ bottom: 60 }} // Accounts for navbar height
+            >
                 {renderCard("Daily Summary", "pie-chart", (
                     <View>
                         <View style={styles.infoRow}>
@@ -132,7 +135,14 @@ const NutritionDashboard = () => {
                         </View>
                     </View>
                 ))}
+
+                {/* Extra space at bottom to account for navbar when scrolled to bottom */}
+                <View style={styles.bottomSpacing} />
             </ScrollView>
+
+            <View style={styles.fixedNavbar}>
+                <NavbarFooter />
+            </View>
         </View>
     );
 };
@@ -164,18 +174,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: 8,
     },
-    headerButtonText: {
-        marginLeft: 5,
-        fontSize: 16,
-        color: '#666',
-    },
     title: {
         fontSize: 28,
         fontWeight: 'bold',
         color: '#333',
     },
-    content: {
-        flex: 1,
+    scrollContent: {
         padding: 20,
     },
     card: {
@@ -211,9 +215,6 @@ const styles = StyleSheet.create({
         color: '#333',
         marginLeft: 10,
     },
-    cardContent: {
-        marginTop: 10,
-    },
     infoRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -241,6 +242,16 @@ const styles = StyleSheet.create({
         marginVertical: 8,
         borderRadius: 16,
     },
+    fixedNavbar: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 60,
+    },
+    bottomSpacing: {
+        height: 60, // Same as navbar height
+    }
 });
 
 export default NutritionDashboard;

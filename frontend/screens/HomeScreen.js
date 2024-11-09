@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import useStreakTracking from './streaktrack';
-
+import NavbarFooter from './Navbar';
 const { width } = Dimensions.get('window');
 const waterGoal = 2700;  // 2.7 liters in milliliters
 
@@ -270,25 +270,6 @@ const HomeScreen = () => {
         <View style={styles.spacer} />
       </ScrollView>
 
-      {/* Navigation Bar */}
-      <View style={styles.navbar}>
-        {[
-          { icon: 'home-outline', label: 'Home', active: true },
-          { icon: 'pie-chart-outline', label: 'Chart', active: false },
-          { icon: 'receipt-outline', label: 'Lock', active: false },
-          { icon: 'person-outline', label: 'Profile', active: false },
-        ].map((item, index) => (
-          <TouchableOpacity key={index} style={styles.navItem}>
-            <Ionicons
-              name={item.icon}
-              size={24}
-              color={item.active ? '#00DFA2' : '#CAD5E2'}
-              style={item.active ? styles.activeNavIcon : styles.navIcon}
-            />
-          </TouchableOpacity>
-        ))}
-      </View>
-
       {/* Add Water Modal */}
       <Modal visible={showWaterModal} animationType="slide" transparent={true}>
         <View style={styles.modalContainer}>
@@ -336,6 +317,8 @@ const HomeScreen = () => {
           </View>
         </View>
       </Modal>
+      <NavbarFooter />
+      
     </LinearGradient>
   );
 };
@@ -349,7 +332,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   spacer: {
-    height: 80, // Additional space to push content above the footer
+    height: 100, // Additional space to push content above the footer
   },
   logoutButton: {
     backgroundColor: '#FF6F61',

@@ -1,41 +1,51 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, TouchableOpacity } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { useNavigation } from '@react-navigation/native'; // Import the useNavigation hook
+import { useNavigation, useRoute } from '@react-navigation/native';
 
 const NavbarFooter = () => {
-  const navigation = useNavigation(); // Initialize the navigation hook
-  const [activeIndex, setActiveIndex] = useState(0);
+  const navigation = useNavigation();
+  const route = useRoute(); // Get current route information
 
   const navItems = [
-    { icon: 'home-outline', label: 'Home', screen: 'Home' },
-    { icon: 'pie-chart-outline', label: 'Chart', screen: 'Statistics' },
-    { icon: 'receipt-outline', label: 'Lock', screen: 'RecipeSwiper' },
-    { icon: 'person-outline', label: 'Profile', screen: 'UserProfile' },
+    { icon: 'home-outline', activeIcon: 'home', label: 'Home', screen: 'Home' },
+    { icon: 'pie-chart-outline', activeIcon: 'pie-chart', label: 'Chart', screen: 'Statistics' },
+    { icon: 'receipt-outline', activeIcon: 'receipt', label: 'Lock', screen: 'RecipeSwiper' },
+    { icon: 'person-outline', activeIcon: 'person', label: 'Profile', screen: 'UserProfile' },
   ];
 
-  // Function to handle item click and navigate to the corresponding screen
-  const handleItemClick = (index, screen) => {
-    setActiveIndex(index); // Update active index
-    navigation.navigate(screen); // Navigate to the screen
+  const handleItemClick = (screen) => {
+    navigation.navigate(screen);
   };
 
   return (
     <View style={styles.navbar}>
-      {navItems.map((item, index) => (
-        <TouchableOpacity
-          key={index}
-          style={styles.navItem}
-          onPress={() => handleItemClick(index, item.screen)} // Pass screen name to navigate
-        >
-          <Ionicons
-            name={item.icon}
-            size={24}
-            color={activeIndex === index ? '#00DFA2' : '#CAD5E2'}
-            style={activeIndex === index ? styles.activeNavIcon : styles.navIcon}
-          />
-        </TouchableOpacity>
-      ))}
+      {navItems.map((item, index) => {
+        const isActive = route.name === item.screen;
+        return (
+          <TouchableOpacity
+            key={index}
+            style={[
+              styles.navItem,
+              isActive && styles.activeNavItem
+            ]}
+            onPress={() => handleItemClick(item.screen)}
+          >
+            <Ionicons
+              name={isActive ? item.activeIcon : item.icon}
+              size={24}
+              color={isActive ? '#00DFA2' : '#CAD5E2'}
+              style={[
+                styles.navIcon,
+                isActive && styles.activeNavIcon
+              ]}
+            />
+            {isActive && (
+              <View style={styles.activeIndicator} />
+            )}
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 };
@@ -61,14 +71,32 @@ const styles = {
   },
   navItem: {
     alignItems: 'center',
+    justifyContent: 'center',
     flex: 1,
+    height: '100%',
+    position: 'relative',
+  },
+  activeNavItem: {
+    transform: [{scale: 1.1}],
   },
   navIcon: {
     fontSize: 24,
   },
   activeNavIcon: {
-    color: '#00DFA2', // Active item color
+    color: '#00DFA2',
+    // Add subtle glow effect
+    //textShadowColor: '#00DFA2',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
   },
+  activeIndicator: {
+    position: 'absolute',
+    bottom: -5,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#00DFA2',
+  }
 };
 
 export default NavbarFooter;
