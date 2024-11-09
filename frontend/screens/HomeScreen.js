@@ -1,34 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Dimensions, Modal, TextInput, Button } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Plus, ArrowRight, User, Trophy } from 'lucide-react-native';
+import { Plus, ArrowRight, Trophy } from 'lucide-react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
+const waterGoal = 2700;  // 2.7 liters in milliliters
 
 const HomeScreen = () => {
   const navigation = useNavigation();
-  const [gender] = useState('male');  // Assume this is fetched from user data
+  const [waterConsumed, setWaterConsumed] = useState(0);
+  const [showWaterModal, setShowWaterModal] = useState(false);
+  const [newWaterAmount, setNewWaterAmount] = useState('');
+  const [dailyStats] = useState({
+    caloriesRemaining: 850,
+    caloriesConsumed: 1150,
+    dailyStreak: 7,
+  });
   const [recentMeals, setRecentMeals] = useState([
     { id: 1, name: 'Breakfast', time: '8:30 AM', calories: 420 },
     { id: 2, name: 'Lunch', time: '12:45 PM', calories: 630 },
     { id: 3, name: 'Snack', time: '3:30 PM', calories: 100 },
   ]);
-  
-  // Gender-based recommended calories
-  const recommendedCalories = gender === 'male' ? 2500 : 2000;
-
-  // Calculate total calories consumed from recent meals
-  const totalCaloriesConsumed = recentMeals.reduce((total, meal) => total + meal.calories, 0);
-  const caloriesRemaining = recommendedCalories - totalCaloriesConsumed;
-
-  const [dailyStats, setDailyStats] = useState({
-    caloriesRemaining: caloriesRemaining,
-    caloriesConsumed: totalCaloriesConsumed,
-    dailyStreak: 7,
-  });
 
   const [leaderboard] = useState([
     { rank: 1, name: 'Sarah M.', points: 2800 },
@@ -37,12 +32,14 @@ const HomeScreen = () => {
     { rank: 4, name: 'Emma R.', points: 2200 },
     { rank: 5, name: 'Mike P.', points: 2100 },
   ]);
+  const waterPercentage = Math.min((waterConsumed / waterGoal) * 100, 100).toFixed(1);
+  const waterRemaining = (waterGoal - waterConsumed) / 1000;  // Convert to liters
 
   const [showAddMealModal, setShowAddMealModal] = useState(false);
   const [newMeal, setNewMeal] = useState({ name: '', time: '', calories: '' });
 
-  // Handle adding a new meal
-  const handleAddMeal = () => {
+   // Handle adding a new meal
+   const handleAddMeal = () => {
     const newMealData = {
       id: recentMeals.length + 1,
       ...newMeal,
@@ -64,14 +61,23 @@ const HomeScreen = () => {
     setNewMeal({ name: '', time: '', calories: '' });
     setShowAddMealModal(false);
   };
-
-  // Handle logout function
-  const handleLogout = async () => {
+  
+ // Handle logout function
+ const handleLogout = async () => {
     try {
       await AsyncStorage.removeItem('user');
       navigation.navigate('WelcomeScreen');
     } catch (error) {
       console.error('Error logging out:', error);
+    }
+  };
+  // Handle adding water consumption
+  const handleAddWater = () => {
+    const amount = parseInt(newWaterAmount, 10);
+    if (!isNaN(amount)) {
+      setWaterConsumed(prev => Math.min(prev + amount, waterGoal));  // Ensure it doesn't exceed the goal
+      setNewWaterAmount('');
+      setShowWaterModal(false);
     }
   };
 
@@ -91,19 +97,35 @@ const HomeScreen = () => {
         <View style={[styles.card, styles.waterCard]}>
           <View style={styles.waterContent}>
             <View style={styles.waterCircle}>
-              <Text style={styles.waterPercentage}>{65}%</Text>
+              <Text style={styles.waterPercentage}>{waterPercentage}%</Text>
               <Text style={styles.waterLabel}>Daily Goal</Text>
             </View>
             <View style={styles.waterInfo}>
-              <Text style={styles.waterRemaining}>1.4L</Text>
+              <Text style={styles.waterRemaining}>{waterRemaining.toFixed(1)}L</Text>
               <Text style={styles.waterSubtext}>remaining</Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.addWaterButton}>
+          <TouchableOpacity style={styles.addWaterButton} onPress={() => setShowWaterModal(true)}>
             <Plus size={24} color="#4FC3F7" />
           </TouchableOpacity>
         </View>
-
+        {/* Add Water Modal */}
+        <Modal visible={showWaterModal} animationType="slide" transparent={true}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Add Water Consumption</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter water in ml"
+                value={newWaterAmount}
+                keyboardType="numeric"
+                onChangeText={(text) => setNewWaterAmount(text)}
+              />
+              <Button title="Add Water" onPress={handleAddWater} />
+              <Button title="Cancel" onPress={() => setShowWaterModal(false)} color="red" />
+            </View>
+          </View>
+        </Modal>
         {/* Daily Stats */}
         <View style={styles.statsContainer}>
           {[ 
@@ -185,8 +207,8 @@ const HomeScreen = () => {
         ))}
       </View>
 
-      {/* Add Meal Modal */}
-      <Modal visible={showAddMealModal} animationType="slide" transparent={true}>
+     {/* Add Meal Modal */}
+     <Modal visible={showAddMealModal} animationType="slide" transparent={true}>
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Add New Meal</Text>
@@ -303,6 +325,23 @@ const styles = StyleSheet.create({
     padding: 8,
     backgroundColor: 'rgba(79, 195, 247, 0.1)',
     borderRadius: 15,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    marginHorizontal: 20,
+    padding: 20,
+    borderRadius: 10,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#333',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -465,3 +504,4 @@ const styles = StyleSheet.create({
 });
 
 export default HomeScreen;
+

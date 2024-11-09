@@ -8,6 +8,7 @@ import HomeScreen from './screens/HomeScreen';
 import ProfileSetupScreen from './screens/ProfileSetup';
 import RecipeSwiperScreen from './screens/SwiperScreen';
 
+
 import UserProfile from './screens/UserProfile';
 const Stack = createStackNavigator();
 
@@ -15,7 +16,7 @@ export default function AppNavigator({ isLoggedIn }) {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName={isLoggedIn ? "RecipeSwiper" : "WelcomeScreen"}
+        initialRouteName={isLoggedIn ? "Home" : "WelcomeScreen"}
         screenOptions={{ headerShown: false }}
       >
         <Stack.Screen name="WelcomeScreen" component={WelcomeScreen} />
