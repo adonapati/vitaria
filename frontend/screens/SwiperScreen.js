@@ -16,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialIcons } from '@expo/vector-icons';
 import API_URL from './config.js';
 import NavbarFooter from './Navbar.js';
+import EventEmitter from 'react-native-event-listeners';
 
 const { width, height } = Dimensions.get('window');
 const SWIPE_THRESHOLD = width * 0.25;
@@ -248,13 +249,18 @@ const RecipeSwiperScreen = () => {
 
     const onSwipeComplete = (direction) => {
         if (direction === 'right') {
+            // Save the liked recipe and update the recent meals
             saveLikedRecipe(recipes[currentIndex]._id);
+            
+            // Optionally show the recipe details after a right swipe
             setSelectedRecipe(recipes[currentIndex]);
             setShowRecipe(true);
         }
+        // Reset position and move to the next card
         position.setValue({ x: 0, y: 0 });
         setCurrentIndex(prevIndex => prevIndex + 1);
     };
+    
     
     const handleReset = () => {
         setShowResetBar(false);
@@ -262,27 +268,31 @@ const RecipeSwiperScreen = () => {
     };
 
     const saveLikedRecipe = async (recipeId) => {
-        try {
-            const likedRecipe = recipes.find(recipe => recipe._id === recipeId);
-            if (likedRecipe) {
-                // Retrieve existing recent meals
-                const existingMeals = await AsyncStorage.getItem('recentMeals');
-                const recentMeals = existingMeals ? JSON.parse(existingMeals) : [];
-                console.log("saved")
+    try {
+        const likedRecipe = recipes.find(recipe => recipe._id === recipeId);
+        if (likedRecipe) {
+            // Retrieve existing recent meals
+            const existingMeals = await AsyncStorage.getItem('recentMeals');
+            const recentMeals = existingMeals ? JSON.parse(existingMeals) : [];
+            
+            // Add the new recipe at the start of the list
+            recentMeals.unshift(likedRecipe);
     
-                // Add the new recipe at the start of the list
-                recentMeals.unshift(likedRecipe);
+            // Limit the list to the last 5 meals
+            if (recentMeals.length > 5) recentMeals.pop();
     
-                // Limit the list to the last 5 meals
-                if (recentMeals.length > 5) recentMeals.pop();
+            // Save updated list to AsyncStorage
+            await AsyncStorage.setItem('recentMeals', JSON.stringify(recentMeals));
     
-                // Save updated list to AsyncStorage
-                await AsyncStorage.setItem('recentMeals', JSON.stringify(recentMeals));
-            }
-        } catch (error) {
-            console.error('Error saving liked recipe:', error);
+            // Optionally, update recentMeals state to reflect immediately
+            //setRecentMeals([...recentMeals]);
+            console.log("Recipe saved and recent meals updated");
         }
-    };
+    } catch (error) {
+        console.error('Error saving liked recipe:', error);
+    }
+};
+
 
     const resetPosition = () => {
         Animated.spring(position, {
@@ -379,6 +389,7 @@ const RecipeSwiperScreen = () => {
     );
 };
 
+
 const RecipeCard = ({ recipe, isFirst }) => {
     if (!recipe) return null;
 
@@ -386,8 +397,7 @@ const RecipeCard = ({ recipe, isFirst }) => {
         <Animated.View style={[styles.card, !isFirst && styles.cardStacked]}>
             <Image
                 source={{ uri: recipe.imageUrl }}
-                style={styles.cardImage}
-                resizeMode="cover"
+                style={styles.recipeImage}
             />
             <View style={styles.cardContent}>
                 <Text style={styles.cardTitle}>{recipe.name}</Text>
@@ -405,91 +415,90 @@ const RecipeCard = ({ recipe, isFirst }) => {
                     {recipe.description}
                 </Text>
             </View>
-
         </Animated.View>
-        
     );
 };
-
 // Recipe Detail Modal
+
 const RecipeDetail = ({ recipe, visible, onClose }) => {
     if (!recipe) return null;
 
     return (
-        <Modal
-            visible={visible}
-            animationType="slide"
-            transparent={false}
-        >
-            <View style={styles.modalContainer}>
-
-
-                <ScrollView>
-                    <Image
-                        source={{ uri: recipe.imageUrl }}
-                        style={styles.recipeImage}
-                        resizeMode="cover"
-                    />
-                    <TouchableOpacity
-                        style={styles.closeButton}
-                        onPress={onClose}
-                    >
-                        <MaterialIcons name="close" size={28} color="#FFF" />
-                    </TouchableOpacity>
-                    
-                    <View style={styles.recipeContent}>
-                        <Text style={styles.recipeTitle}>{recipe.name}</Text>
+        
+            <Modal
+                visible={visible}
+                animationType="slide"
+                transparent={false}
+            >
+                <View style={styles.modalContainer}>
+    
+    
+                    <ScrollView>
+                        <Image
+                            source={{ uri: recipe.imageUrl }}
+                            style={styles.recipeImage}
+                            resizeMode="cover"
+                        />
+                        <TouchableOpacity
+                            style={styles.closeButton}
+                            onPress={onClose}
+                        >
+                            <MaterialIcons name="close" size={28} color="#FFF" />
+                        </TouchableOpacity>
                         
-                        <View style={styles.recipeMetrics}>
-                            <View style={styles.metricItem}>
-                                <MaterialIcons name="schedule" size={24} color="#FFD700" />
-                                <Text style={styles.metricText}>{recipe.prepTime}</Text>
-                            </View>
-                            <View style={styles.infoItem}>
-                                <MaterialIcons name="local-fire-department" size={20} color="#FFD700" />
-                                <Text style={styles.infoText}>{recipe.calories} cal</Text>
-                            </View>
-                            <View style={styles.metricItem}>
-                                <MaterialIcons name="restaurant" size={24} color="#FFD700" />
-                                <Text style={styles.metricText}>{recipe.servings} servings</Text>
-                            </View>
-                        </View>
-
-                        <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Description</Text>
-                            <Text style={styles.sectionText}>{recipe.description}</Text>
-                        </View>
-
-                        <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Ingredients</Text>
-                            {(recipe.ingredients || []).map((ingredient, index) => (
-                                <View key={index} style={styles.ingredientItem}>
-                                    <MaterialIcons name="fiber-manual-record" size={12} color="#FFD700" />
-                                    <Text style={styles.ingredientText}>{ingredient}</Text>
+                        <View style={styles.recipeContent}>
+                            <Text style={styles.recipeTitle}>{recipe.name}</Text>
+                            
+                            <View style={styles.recipeMetrics}>
+                                <View style={styles.metricItem}>
+                                    <MaterialIcons name="schedule" size={24} color="#FFD700" />
+                                    <Text style={styles.metricText}>{recipe.prepTime}</Text>
                                 </View>
-                            ))}
-                        </View>
-
-                        <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Instructions</Text>
-                            {(recipe.instructions || []).map((step, index) => (
-                                <View key={index} style={styles.instructionItem}>
-                                    <Text style={styles.instructionNumber}>{index + 1}</Text>
-                                    <Text style={styles.instructionText}>{step}</Text>
+                                <View style={styles.infoItem}>
+                                    <MaterialIcons name="local-fire-department" size={20} color="#FFD700" />
+                                    <Text style={styles.infoText}>{recipe.calories} cal</Text>
                                 </View>
-                            ))}
+                                <View style={styles.metricItem}>
+                                    <MaterialIcons name="restaurant" size={24} color="#FFD700" />
+                                    <Text style={styles.metricText}>{recipe.servings} servings</Text>
+                                </View>
+                            </View>
+    
+                            <View style={styles.section}>
+                                <Text style={styles.sectionTitle}>Description</Text>
+                                <Text style={styles.sectionText}>{recipe.description}</Text>
+                            </View>
+    
+                            <View style={styles.section}>
+                                <Text style={styles.sectionTitle}>Ingredients</Text>
+                                {(recipe.ingredients || []).map((ingredient, index) => (
+                                    <View key={index} style={styles.ingredientItem}>
+                                        <MaterialIcons name="fiber-manual-record" size={12} color="#FFD700" />
+                                        <Text style={styles.ingredientText}>{ingredient}</Text>
+                                    </View>
+                                ))}
+                            </View>
+    
+                            <View style={styles.section}>
+                                <Text style={styles.sectionTitle}>Instructions</Text>
+                                {(recipe.instructions || []).map((step, index) => (
+                                    <View key={index} style={styles.instructionItem}>
+                                        <Text style={styles.instructionNumber}>{index + 1}</Text>
+                                        <Text style={styles.instructionText}>{step}</Text>
+                                    </View>
+                                ))}
+                            </View>
                         </View>
-                    </View>
-                    <View style={styles.spacer} />
-                </ScrollView>
+                        <View style={styles.spacer} />
+                    </ScrollView>
+                    
+                </View>
                 
-            </View>
-            
+    
+            </Modal>
 
-        </Modal>
     );
 };
-
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -753,5 +762,4 @@ const styles = StyleSheet.create({
     },
     
 });
-
 export default RecipeSwiperScreen;

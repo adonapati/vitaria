@@ -7,7 +7,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import useStreakTracking from './streaktrack';
 import NavbarFooter from './Navbar';
+import { DeviceEventEmitter } from 'react-native';
+import RecentMealsList from './recentmealslist';
+
 const { width } = Dimensions.get('window');
+
 const waterGoal = 2700;  // 2.7 liters in milliliters
 
 const STORAGE_KEYS = {
@@ -28,19 +32,30 @@ const HomeScreen = () => {
 
   useEffect(() => {
     const loadRecentMeals = async () => {
-        try {
-            const mealsString = await AsyncStorage.getItem('recentMeals');
-            if (mealsString) {
-                setRecentMeals(JSON.parse(mealsString));
-            }
-        } catch (error) {
-            console.error('Error loading recent meals:', error);
+      try {
+        const mealsString = await AsyncStorage.getItem(STORAGE_KEYS.RECENT_MEALS);
+        if (mealsString) {
+          setRecentMeals(JSON.parse(mealsString));
         }
+      } catch (error) {
+        console.error('Error loading recent meals:', error);
+      }
     };
+
     loadRecentMeals();
-}, []);
 
+    // Add event listener for mealSaved
+    const listener = DeviceEventEmitter.addListener('mealSaved', (updatedMeals) => {
+      setRecentMeals(updatedMeals);
+    });
 
+    return () => {
+      // Cleanup listener on component unmount
+      listener.remove();
+    };
+  }, []);
+
+  // Calculate daily stats based on recent meals
   const recommendedCalories = gender === 'male' ? 2500 : 2000;
   const totalCaloriesConsumed = recentMeals.reduce((total, meal) => total + meal.calories, 0);
   const caloriesRemaining = recommendedCalories - totalCaloriesConsumed;
@@ -86,7 +101,7 @@ const HomeScreen = () => {
       await checkAndResetDaily();
       await loadSavedData();
     };
-    
+
     initializeData();
 
     // Set up daily check at midnight
@@ -109,9 +124,10 @@ const HomeScreen = () => {
   useEffect(() => {
     setDailyStats(prev => ({
       ...prev,
-      dailyStreak: streak
+      caloriesConsumed: totalCaloriesConsumed,
+      caloriesRemaining: recommendedCalories - totalCaloriesConsumed
     }));
-  }, [streak]);
+  }, [recentMeals, totalCaloriesConsumed]);
 
   const loadSavedData = async () => {
     try {
@@ -152,12 +168,21 @@ const HomeScreen = () => {
 
       // Save water consumption
       await AsyncStorage.setItem(STORAGE_KEYS.WATER_CONSUMED, newWaterConsumed.toString());
-      
+
       // Update daily progress and check streak
       await saveDailyProgress(newWaterConsumed, totalCaloriesConsumed);
     }
   };
 
+  const addMeal = (meal) => {
+    setRecentMeals((prevMeals) => {
+      if (prevMeals.some(existingMeal => existingMeal.id === meal.id)) {
+        return prevMeals; // Prevent duplicates by checking the id
+      }
+      return [...prevMeals, meal]; // Add the new meal to the list
+    });
+  };
+ 
   const handleAddMeal = async () => {
     const newMealData = {
       id: recentMeals.length + 1,
@@ -167,7 +192,7 @@ const HomeScreen = () => {
 
     const updatedMeals = [...recentMeals, newMealData];
     const totalCalories = updatedMeals.reduce((total, meal) => total + meal.calories, 0);
-    
+
     setRecentMeals(updatedMeals);
     setDailyStats({
       caloriesRemaining: recommendedCalories - totalCalories,
@@ -177,7 +202,7 @@ const HomeScreen = () => {
 
     // Save meals
     await AsyncStorage.setItem(STORAGE_KEYS.RECENT_MEALS, JSON.stringify(updatedMeals));
-    
+
     // Update daily progress and check streak
     await saveDailyProgress(waterConsumed, totalCalories);
 
@@ -222,9 +247,8 @@ const HomeScreen = () => {
             <Plus size={24} color="#4FC3F7" />
           </TouchableOpacity>
         </View>
-
-        {/* Daily Stats */}
-        <View style={styles.statsContainer}>
+{/* Daily Stats */}
+<View style={styles.statsContainer}>
           {[
             { unit: 'Remaining', value: dailyStats.caloriesRemaining, title: 'kcal' },
             { unit: 'Consumed', value: dailyStats.caloriesConsumed, title: 'kcal' },
@@ -238,31 +262,20 @@ const HomeScreen = () => {
           ))}
         </View>
 
+
         {/* Recent Meals */}
-        <View style={[styles.card, styles.mealsCard]}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Meals</Text>
-            <TouchableOpacity onPress={() => setShowAddMealModal(true)}>
-              <Plus size={24} color="#4CAF50" />
-            </TouchableOpacity>
-          </View>
-          {recentMeals.length === 0 ? (
-            <Text style={styles.emptyMessage}>No recent meals</Text>
-          ) : (
-            recentMeals.map((meal, index) => (
-              <View key={index} style={styles.mealItem}>
-                <View>
-                  <Text style={styles.mealName}>{meal.name}</Text>
-                  <Text style={styles.mealTime}>{meal.time}</Text>
-                </View>
-                <Text style={styles.mealCalories}>{meal.calories} kcal</Text>
-              </View>
-            ))
-          )}
+        <View style={styles.recentMeals}>
+          <RecentMealsList recentMeals={recentMeals} onAddMeal={addMeal} />
+          <TouchableOpacity
+            style={styles.addMealButton}
+            onPress={() => setShowAddMealModal(true)}
+          >
+            
+          </TouchableOpacity>
         </View>
 
-        {/* Leaderboard */}
-        <View style={[styles.card, styles.leaderboardCard]}>
+       {/* Leaderboard */}
+       <View style={[styles.card, styles.leaderboardCard]}>
           <View style={styles.sectionHeader}>
             <View style={styles.leaderboardTitleContainer}>
               <Trophy size={24} color="#FFD700" />
@@ -281,50 +294,32 @@ const HomeScreen = () => {
           ))}
         </View>
 
-        {/* Grocery List */}
-        <View style={[styles.card, styles.leaderboardCard]}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.leaderboardTitleContainer}>
-              <Text style={styles.sectionTitle}>Grocery List</Text>
-            </View>
-            <TouchableOpacity>
-              <ArrowRight size={20} color="#666" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={styles.spacer} />
+       
       </ScrollView>
 
       {/* Add Water Modal */}
-      <Modal visible={showWaterModal} animationType="fade" transparent={true}>
-        <View style={styles.centeredModalContainer}>
-          <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>Add Water Consumption</Text>
+      <Modal visible={showWaterModal} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Add Water</Text>
             <TextInput
               style={styles.modalInput}
-              placeholder="Enter water in ml"
+              placeholder="Enter amount in ml"
               value={newWaterAmount}
+              onChangeText={setNewWaterAmount}
               keyboardType="numeric"
-              onChangeText={(text) => setNewWaterAmount(text)}
             />
-            <View style={styles.modalButtonContainer}>
-              <TouchableOpacity style={[styles.modalButton, styles.modalButtonAdd]} onPress={handleAddWater}>
-                <Text style={styles.modalButtonText}>Add</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButton, styles.modalButtonCancel]} onPress={() => setShowWaterModal(false)}>
-                <Text style={styles.modalButtonText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
+            <Button title="Add" onPress={handleAddWater} />
+            <Button title="Cancel" onPress={() => setShowWaterModal(false)} />
           </View>
         </View>
       </Modal>
 
       {/* Add Meal Modal */}
-      <Modal visible={showAddMealModal} animationType="fade" transparent={true}>
-        <View style={styles.centeredModalContainer}>
-          <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>Add New Meal</Text>
+      <Modal visible={showAddMealModal} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Add Meal</Text>
             <TextInput
               style={styles.modalInput}
               placeholder="Meal Name"
@@ -333,7 +328,7 @@ const HomeScreen = () => {
             />
             <TextInput
               style={styles.modalInput}
-              placeholder="Time (e.g., 8:30 AM)"
+              placeholder="Meal Time"
               value={newMeal.time}
               onChangeText={(text) => setNewMeal({ ...newMeal, time: text })}
             />
@@ -341,25 +336,23 @@ const HomeScreen = () => {
               style={styles.modalInput}
               placeholder="Calories"
               value={newMeal.calories}
-              keyboardType="numeric"
               onChangeText={(text) => setNewMeal({ ...newMeal, calories: text })}
+              keyboardType="numeric"
             />
-            <View style={styles.modalButtonContainer}>
-              <TouchableOpacity style={[styles.modalButton, styles.modalButtonAdd]} onPress={handleAddMeal}>
-                <Text style={styles.modalButtonText}>Add</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButton, styles.modalButtonCancel]} onPress={() => setShowAddMealModal(false)}>
-                <Text style={styles.modalButtonText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
+            <Button title="Add Meal" onPress={handleAddMeal} />
+            <Button title="Cancel" onPress={() => setShowAddMealModal(false)} />
           </View>
         </View>
       </Modal>
-      <NavbarFooter />
-      
+       {/* Footer */}
+       <NavbarFooter />
     </LinearGradient>
   );
 };
+
+
+
+
 
 // Style modifications go here
 const styles = StyleSheet.create({
@@ -673,10 +666,34 @@ mealPrepTime: {
     fontSize: 14,
     color: '#888',
 },
+dailyTipContainer: {
+  backgroundColor: '#4CAF50', // A pleasant green background
+  padding: 15,
+  marginVertical: 10,
+  borderRadius: 15,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.3,
+  shadowRadius: 5,
+  elevation: 5,
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+dailyTipText: {
+  fontSize: 18,
+  fontWeight: '600',
+  color: '#FFF', // White text for contrast on green
+  textAlign: 'center',
+  lineHeight: 24,
+},
+
+
 
 
 
 
 });
+
 
 export default HomeScreen;
