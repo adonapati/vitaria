@@ -88,7 +88,6 @@ const HomeScreen = () => {
     };
     
     initializeData();
-
     // Set up daily check at midnight
     const now = new Date();
     const tomorrow = new Date(now);
@@ -193,6 +192,19 @@ const HomeScreen = () => {
       console.error('Error logging out:', error);
     }
   };
+  const healthTips = [
+    "Stay hydrated by drinking at least 8 cups of water daily.",
+    "Aim to include a source of protein in every meal.",
+    "Take short breaks throughout the day to stretch and move.",
+    "Incorporate more leafy greens into your diet for essential vitamins.",
+    "Practice mindful eating by chewing slowly and savoring each bite.",
+    "Aim to get at least 7-8 hours of sleep for better health.",
+    "Limit sugary drinks and opt for water or herbal teas.",
+    "Include fiber-rich foods to support digestion.",
+    "Try to eat within a 12-hour window each day for better metabolism.",
+    "Add a variety of colors to your meals with fruits and vegetables."
+];  
+const randomTip = healthTips[Math.floor(Math.random() * healthTips.length)];
 
   return (
     <LinearGradient
@@ -204,6 +216,9 @@ const HomeScreen = () => {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Today's Progress</Text>
+        </View>
+        <View style={styles.dailyTipContainer}>
+          <Text style={styles.dailyTipText}>Daily Tip: {randomTip}</Text>
         </View>
 
         {/* Water Tracking Card */}
@@ -673,6 +688,29 @@ mealPrepTime: {
     fontSize: 14,
     color: '#888',
 },
+dailyTipContainer: {
+  backgroundColor: '#4CAF50', // A pleasant green background
+  padding: 15,
+  marginVertical: 10,
+  borderRadius: 15,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.3,
+  shadowRadius: 5,
+  elevation: 5,
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+dailyTipText: {
+  fontSize: 18,
+  fontWeight: '600',
+  color: '#FFF', // White text for contrast on green
+  textAlign: 'center',
+  lineHeight: 24,
+},
+
+
 
 
 
