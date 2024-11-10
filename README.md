@@ -26,7 +26,7 @@ Vitaria isn’t just another meal planner. We’re here to deliver an intelligen
 
 ## 🛠️ Tech Stack
 - **Frontend**: React Native
-- **Backend**: Flask
+- **Backend**: Node.js
 - **Database**: MongoDB
 
 ## 🚀 How It Works
